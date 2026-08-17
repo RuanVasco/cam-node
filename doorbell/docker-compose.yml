@@ -1,0 +1,8 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./out:/out
+    command: sh -c "cp /build/app.exe /out/app.exe && /out/app.exe"
