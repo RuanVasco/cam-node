@@ -174,7 +174,7 @@ Se um arquivo em `shared` é usado por uma feature só, ele não pertence a `sha
 
 ## Backend
 
-- Injeção por construtor, dependências `final`. Sem `@Autowired` em campo.
+- Injeção por construtor, dependências `final`. Sem `@Autowired`, nem em teste: a classe de teste do Spring recebe as dependências pelo construtor (`spring.test.constructor.autowire.mode=all` em `src/test/resources/junit-platform.properties`).
 - DTO como `record`. Validação declarativa (Bean Validation) com `@Valid` na borda.
 - `spring.jpa.open-in-view: false` e `spring.jpa.hibernate.ddl-auto: validate` em todo ambiente.
 - Transação no serviço, escopo mínimo, sem chamada de rede (MinIO incluído) dentro de transação aberta.
