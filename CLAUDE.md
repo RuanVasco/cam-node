@@ -269,7 +269,7 @@ Mesmo modelo dos outros apps do homelab (referência: `apematch` no gitops e o w
 
 Pipeline: GitHub Actions faz build e testes, publica `ghcr.io/ruanvasco-labs/cam-node-{api,frontend}:<sha>` e atualiza a tag no gitops com `sed`. O ArgoCD sincroniza. Artefato sempre versionado por commit.
 
-No k3s, namespace `cam-node`, réplica única: `cam-node-frontend` (nginx, entrada do tunnel em `campainha.formulei.com.br`) e `cam-node-api` (Spring, perfil `prd`, probes do actuator, `/actuator/prometheus` raspado pelo Alloy). Segredos do Infisical via External Secrets.
+No k3s, namespace `cam-node`, réplica única: `cam-node-frontend` (nginx, entrada do tunnel em `campainha.formulei.com.br`) e `cam-node-api` (Spring, perfil `prd`, probes do actuator, `/actuator/prometheus` raspado pelo Alloy). Segredos do Infisical via External Secrets (projeto `cam-node`, slug `cam-node-n-yb8`, ambiente `prod`).
 
 Mudanças necessárias em `../infra`: banco e usuário `camnode` com entrada em `pg_clients` para 10.0.0.23, entrada em `minio_app_users` (usuário `camnode`, bucket `cam-node-photos`), item `campainha` em `tunnel_routes`.
 
