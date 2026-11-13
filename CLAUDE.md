@@ -267,7 +267,7 @@ Mesmo modelo dos outros apps do homelab (referência: `apematch` no gitops e o w
 - `../infra` (Terraform e Ansible): Postgres no LXC `db` (10.0.0.21), MinIO na VM `utils` (10.0.0.22:9000), Infisical na `utils` (:8088), k3s em 10.0.0.23, rotas do Cloudflare tunnel em `terraform/tunnel.tf`.
 - `../gitops` (ArgoCD): `argocd-apps/cam-node.yaml` e manifests em `apps/cam-node/`.
 
-Pipeline: GitHub Actions faz build e testes, publica `ghcr.io/ruanvasco-labs/cam-node-{api,frontend}:<sha>` e atualiza a tag no gitops com `sed`. O ArgoCD sincroniza. Artefato sempre versionado por commit.
+Pipeline: GitHub Actions faz build e testes, publica `ghcr.io/ruanvasco/cam-node-{api,frontend}:<sha>` e atualiza a tag no gitops com `sed`. O repositório fica na conta pessoal (`RuanVasco/cam-node`), não na organização `ruanvasco-labs`, que é para projetos comerciais; por isso `GITOPS_DEPLOY_KEY` é segredo do próprio repositório (deploy key com escrita no `gitops`) e o `GHCR_PULL_TOKEN` precisa de `read:packages` da conta pessoal. O ArgoCD sincroniza. Artefato sempre versionado por commit.
 
 No k3s, namespace `cam-node`, réplica única: `cam-node-frontend` (nginx, entrada do tunnel em `campainha.formulei.com.br`) e `cam-node-api` (Spring, perfil `prd`, probes do actuator, `/actuator/prometheus` raspado pelo Alloy). Segredos do Infisical via External Secrets (projeto `cam-node`, slug `cam-node-n-yb8`, ambiente `prod`).
 
