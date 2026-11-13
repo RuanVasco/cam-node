@@ -17,8 +17,8 @@ Sem login no frontend no MVP. Fora do MVP, planejado: notificação push (Web Pu
 
 | Pasta | O que é | Stack |
 |---|---|---|
-| `firmware/` | Firmware do ESP32-S3-CAM | C++ (framework Arduino) no PlatformIO, `esp32-camera` |
-| `doorbell/` | Programa de desktop que simula o ESP (envia uma foto ao backend) | C, libcurl, compilado e executado via Docker (Alpine) |
+| `doorbell/` | Firmware do ESP32-S3-CAM | C++ (framework Arduino) no PlatformIO, `esp32-camera` |
+| `tools/simulator/` | Programa de desktop que simula o ESP (envia uma foto ao backend) | C, libcurl, compilado e executado via Docker (Alpine) |
 | `backend/` | API REST e SSE | ver Stack |
 | `frontend/` | Interface web | ver Stack |
 | `specs/` | Especificações (fonte da verdade do comportamento) | Markdown |
@@ -56,8 +56,8 @@ docker compose up -d          # Postgres e MinIO locais
 ./mvnw spring-boot:run        # backend local
 npm ci && npm start           # frontend local
 npm run build                 # build de produção do front
-pio run -t upload             # grava o firmware (WIFI_SSID, WIFI_PASS, API_URL, DEVICE_API_KEY no ambiente)
-docker compose -f doorbell/docker-compose.yml up --build   # simulador do ESP
+pio run -d doorbell -t upload # grava o firmware (WIFI_SSID, WIFI_PASS, API_URL, DEVICE_API_KEY no ambiente)
+docker compose -f tools/simulator/docker-compose.yml up --build   # simulador do ESP
 ```
 
 Nunca subir versão de Spring Boot, Angular ou Java sem commit dedicado (`build:`) e suíte verde.
@@ -113,7 +113,7 @@ A especificação é a fonte da verdade, o código é a implementação dela. N�
 - Conventional Commits, em inglês, no imperativo presente: `type(scope): subject`.
 - Sem coautoria, sem trailer de ferramenta, sem assinatura de agente, em commit ou PR.
 - Tipos: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`, `revert`.
-- Escopos usuais: `api`, `frontend`, `firmware`, `doorbell`, `deploy`, `specs`.
+- Escopos usuais: `api`, `frontend`, `doorbell` (firmware), `simulator`, `deploy`, `specs`.
 - Assunto em minúsculas, até 72 caracteres, sem ponto final.
 - Breaking change: `!` após o tipo ou escopo e rodapé `BREAKING CHANGE:`.
 - Um commit por unidade lógica, pequeno e frequente. Refatoração não entra junto com correção.
@@ -222,7 +222,7 @@ Liveness não checa banco. Readiness checa.
 - Botão em GPIO livre (a câmera ocupa vários pinos; conferir o pinout da placa), `INPUT_PULLUP` e debounce em software.
 - PSRAM habilitada para os frame buffers da câmera.
 
-## Simulador (`doorbell/`)
+## Simulador (`tools/simulator/`)
 
 - C puro, bibliotecas pequenas em `src/lib/<nome>/` (`.h` e `.c`).
 - HTTP via libcurl (`curl_mime` para o upload multipart). Mesmo contrato e mesmo header de chave que o firmware.

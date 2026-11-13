@@ -15,4 +15,4 @@ Ao criar termo novo, acrescentar aqui antes de usar no código.
 | Foto | `Photo` | Imagem JPEG capturada no toque, guardada no armazenamento de fotos. |
 | Momento do toque | `ringedAt` | Data e hora em que o backend registrou o toque. Ordena o histórico. |
 | Histórico | `RingHistory` | Lista paginada de toques, do mais recente para o mais antigo. |
-| Simulador | `simulator` | Programa em C (`doorbell/`) que faz o papel do dispositivo sem hardware. |
+| Simulador | `simulator` | Programa em C (`tools/simulator/`) que faz o papel do dispositivo sem hardware. |
