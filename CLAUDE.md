@@ -57,7 +57,7 @@ cd backend && ./mvnw spring-boot:run # backend local, usa o compose da raiz
 npm ci && npm start           # frontend local
 npm run build                 # build de produção do front
 pio run -d doorbell -t upload # grava o firmware (WIFI_SSID, WIFI_PASS, API_URL, DEVICE_API_KEY no ambiente)
-docker compose -f tools/simulator/docker-compose.yml up --build   # simulador do ESP
+docker compose -f tools/simulator/docker-compose.yml run --build --rm simulator   # simulador do ESP: envia photos/sample.jpg (API_URL e DEVICE_API_KEY opcionais, padrão é o backend local)
 ```
 
 Nunca subir versão de Spring Boot, Angular ou Java sem commit dedicado (`build:`) e suíte verde.
