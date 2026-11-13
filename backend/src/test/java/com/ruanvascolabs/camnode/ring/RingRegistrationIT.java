@@ -8,7 +8,6 @@ import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
@@ -27,21 +26,19 @@ import software.amazon.awssdk.services.s3.S3Client;
 @TestPropertySource(properties = "camnode.device.api-key=" + RingUploadClient.DEVICE_KEY)
 class RingRegistrationIT {
 
-    @LocalServerPort
-    private int port;
+    private final RingRepository repository;
+    private final S3Client s3;
+    private final RingUploadClient client;
 
-    @Autowired
-    private RingRepository repository;
-
-    @Autowired
-    private S3Client s3;
-
-    private RingUploadClient client;
+    RingRegistrationIT(@LocalServerPort int port, RingRepository repository, S3Client s3) {
+        this.repository = repository;
+        this.s3 = s3;
+        this.client = new RingUploadClient(port);
+    }
 
     @BeforeEach
     void setUp() {
         repository.deleteAll();
-        client = new RingUploadClient(port);
     }
 
     @Test

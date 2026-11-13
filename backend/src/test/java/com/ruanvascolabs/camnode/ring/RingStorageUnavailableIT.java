@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
@@ -24,16 +23,18 @@ import com.ruanvascolabs.camnode.support.TestPhotos;
 })
 class RingStorageUnavailableIT {
 
-    @LocalServerPort
-    private int port;
+    private final RingUploadClient client;
+    private final RingRepository repository;
 
-    @Autowired
-    private RingRepository repository;
+    RingStorageUnavailableIT(@LocalServerPort int port, RingRepository repository) {
+        this.client = new RingUploadClient(port);
+        this.repository = repository;
+    }
 
     @Test
     @DisplayName("SPEC-001 CA-6 (#6): unavailable photo storage answers 503 and records nothing")
     void storageUnavailable() {
-        var response = new RingUploadClient(port).upload(TestPhotos.jpeg(1024), "image/jpeg", RingUploadClient.DEVICE_KEY);
+        var response = client.upload(TestPhotos.jpeg(1024), "image/jpeg", RingUploadClient.DEVICE_KEY);
 
         assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(repository.count()).isZero();
