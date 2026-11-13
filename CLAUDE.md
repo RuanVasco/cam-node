@@ -21,7 +21,7 @@ Sem login no frontend no MVP. Fora do MVP, planejado: notificação push (Web Pu
 | `tools/simulator/` | Programa de desktop que simula o ESP (envia uma foto ao backend) | C, libcurl, compilado e executado via Docker (Alpine) |
 | `backend/` | API REST e SSE | ver Stack |
 | `frontend/` | Interface web | ver Stack |
-| `specs/` | Especificações (fonte da verdade do comportamento) | Markdown |
+| `docs/specs/` | Especificações (fonte da verdade do comportamento) | Markdown |
 | `docs/adr/` | Decisões de arquitetura | Markdown |
 | `docs/glossario.md` | Glossário de domínio PT-BR para EN | Markdown |
 
@@ -94,9 +94,9 @@ Não se comenta: o que o código já diz, getter, setter, construtor, bloco deco
 
 A especificação é a fonte da verdade, o código é a implementação dela. Não se escreve código de funcionalidade antes da spec aprovada.
 
-1. Spec: criar `specs/NNN-nome-curto.md` a partir de `specs/TEMPLATE.md`, com problema, escopo, regras numeradas, critérios de aceite, contrato de API, impacto em dados e fora do escopo.
+1. Spec: criar `docs/specs/NNN-nome-curto.md` a partir de `docs/specs/TEMPLATE.md`, com problema, escopo, regras numeradas, critérios de aceite, contrato de API, impacto em dados e fora do escopo.
 2. Aprovação: discordância sobre comportamento se resolve no markdown, não no código.
-3. Plano: passos, arquivos afetados, ordem e risco de rolling, em `specs/NNN-nome-curto.plano.md`.
+3. Plano: passos, arquivos afetados, ordem e risco de rolling, em `docs/specs/NNN-nome-curto.plano.md`.
 4. Implementação: cada regra numerada vira pelo menos um teste, que cita o identificador da regra no nome ou no display name.
 5. Fechamento: o que mudou durante a implementação volta para a spec no mesmo PR.
 

@@ -19,7 +19,7 @@ O upload exige a chave do dispositivo no header `X-Device-Key`, comparada em tem
 |---|---|
 | mTLS com certificado por dispositivo | Gestão de certificados no ESP32 e no Cloudflare sem ganho para um dispositivo só. |
 | Login no frontend já no MVP | Fora do prazo e sem usuários reais para proteger. |
-| Cloudflare Access na frente do histórico | Bloquearia também o dispositivo, que exigiria service token; adiado para quando houver uso real. |
+| Cloudflare Access na frente do histórico | Bloquearia também o dispositivo, que exigiria service token, e tira a autenticação da aplicação. Descartado em 2026-11-13: a proteção da leitura será feita no Spring Security. |
 
 ## Consequências
 
@@ -29,4 +29,4 @@ O upload exige a chave do dispositivo no header `X-Device-Key`, comparada em tem
 
 ## Revisão
 
-Antes de uso real em casa: proteger leitura (Cloudflare Access ou login com cookie) e permitir chave por dispositivo com revogação.
+Antes de uso real em casa: proteger a leitura com Spring Security (login com cookie de sessão, que também autentica o `EventSource` do SSE) e permitir chave por dispositivo com revogação.
