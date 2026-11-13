@@ -98,6 +98,7 @@ A especificação é a fonte da verdade, o código é a implementação dela. N�
 2. Aprovação: discordância sobre comportamento se resolve no markdown, não no código.
 3. Plano: passos, arquivos afetados, ordem e risco de rolling, em `docs/specs/NNN-nome-curto.plano.md`.
 4. Implementação: cada regra numerada vira pelo menos um teste, que cita o identificador da regra no nome ou no display name.
+   Cada etapa do plano passa por três rodadas de code review antes da seguinte: etapa 1, review 1, correção 1, review 2, correção 2, review 3, correção 3, commit, etapa 2. A rodada sem achado conta como rodada; a correção dela fica vazia.
 5. Fechamento: o que mudou durante a implementação volta para a spec no mesmo PR.
 
 - Identificador de regra estável (`SPEC-001 #3`), nunca reaproveitado nem renumerado.
