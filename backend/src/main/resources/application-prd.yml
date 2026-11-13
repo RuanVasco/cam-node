@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+camnode:
+  device:
+    api-key: ${DEVICE_API_KEY}
+  photo-storage:
+    endpoint: ${PHOTO_STORAGE_ENDPOINT}
+    bucket: ${PHOTO_STORAGE_BUCKET}
+    access-key: ${PHOTO_STORAGE_ACCESS_KEY}
+    secret-key: ${PHOTO_STORAGE_SECRET_KEY}

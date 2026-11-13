@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: cam-node-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/camnode}
+    username: ${DB_USER:camnode}
+    password: ${DB_PASSWORD:camnode}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    clean-disabled: true
+    validate-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
+  mvc:
+    problemdetails:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  shutdown: graceful
+  tomcat:
+    # Above Tomcat's 2MB default so an oversized upload gets a 413 instead of a connection reset.
+    max-swallow-size: 10MB
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+camnode:
+  device:
+    api-key: ${DEVICE_API_KEY:local-device-key}
+  photo-storage:
+    endpoint: ${PHOTO_STORAGE_ENDPOINT:http://localhost:9000}
+    bucket: ${PHOTO_STORAGE_BUCKET:cam-node-photos}
+    access-key: ${PHOTO_STORAGE_ACCESS_KEY:camnode}
+    secret-key: ${PHOTO_STORAGE_SECRET_KEY:camnode-secret}
