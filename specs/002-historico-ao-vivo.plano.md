@@ -11,9 +11,8 @@ Depende da base do backend e da tabela `ring` do plano da SPEC-001.
 
 ### 2. Notificação (`notification/`)
 
-- Adaptador `SseRingNotifier` da porta `RingNotifier`, com a lista de `SseEmitter` em memória (ADR-001) e o endpoint `GET /api/v1/rings/stream`.
+- `SseRingNotifier` escutando o evento `RingRegistered` (`@EventListener`), com a lista de `SseEmitter` em memória (ADR-001) e o endpoint `GET /api/v1/rings/stream`.
 - Sinal de vida agendado (`@Scheduled`), com intervalo por configuração, padrão 30 s (#5); emissor que falha ao enviar é removido.
-- Substitui a implementação vazia usada na SPEC-001.
 
 ### 3. Frontend
 

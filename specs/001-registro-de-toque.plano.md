@@ -23,11 +23,11 @@ O backend vem primeiro e é validado com o simulador, sem depender da placa. O f
 
 ### 4. Chave do dispositivo (`device/`)
 
-- Filtro que protege apenas `POST /api/v1/rings`, compara `X-Device-Key` com `DEVICE_API_KEY` usando `MessageDigest.isEqual` e responde 401 em Problem Details (#1).
+- Interceptor que protege apenas `POST /api/v1/rings`, compara `X-Device-Key` com `DEVICE_API_KEY` usando `MessageDigest.isEqual` e responde 401 em Problem Details (#1).
 
 ### 5. Caso de uso (`ring/`)
 
-- `RingService.register(photo)`: valida assinatura JPEG (#3), grava a foto, depois persiste o toque com `ringedAt = clock.instant()` (#5, `Clock` injetado), depois chama a porta `RingNotifier` (#7; adaptador SSE vem no plano da SPEC-002, até lá uma implementação vazia).
+- `RingService.register(photo)`: valida assinatura JPEG (#3), grava a foto, depois persiste o toque com `ringedAt = clock.instant()` (#5, `Clock` injetado), depois publica o evento de domínio `RingRegistered` pelo `ApplicationEventPublisher` (#7). O adaptador SSE da SPEC-002 escuta esse evento; sem porta própria nem implementação vazia enquanto ele não existe.
 - Limite de 2 MB por `spring.servlet.multipart.max-file-size` e `max-request-size`, com `MaxUploadSizeExceededException` mapeada para 413 (#4).
 - `RingController` com `POST /api/v1/rings` e DTO de resposta `RingResponse`.
 
@@ -40,8 +40,8 @@ O backend vem primeiro e é validado com o simulador, sem depender da placa. O f
 | Sem campo `photo` | integração | CA-3 |
 | PNG declarado como JPEG | unitário do validador e integração | CA-4 |
 | Arquivo de 2,5 MB | integração | CA-5 |
-| MinIO fora do ar: 503 e tabela vazia | integração com container parado | CA-6 |
-| Notificador chamado com o toque criado | unitário com dublê da porta | CA-7 |
+| MinIO fora do ar: 503 e tabela vazia | integração com endpoint de storage sem ninguém escutando | CA-6 |
+| Evento `RingRegistered` publicado com o toque criado | unitário com dublê do publicador | CA-7 |
 
 ### 7. Simulador (`tools/simulator/`)
 
@@ -64,3 +64,4 @@ O backend vem primeiro e é validado com o simulador, sem depender da placa. O f
 - Pinout da placa ainda não conferido: pino do botão e modelo de câmera definidos com a placa em mãos.
 - Rede do IF: WPA2-Enterprise ou portal cativo impedem o ESP; plano B é o hotspot do celular, com firmware compilado para ele.
 - Rolling: só expand (tabela nova), sem risco para versão anterior.
+- A MinIO parou de publicar imagens no Docker Hub e no quay.io. Testes e compose local usam `bitnamilegacy/minio:2025.7.23`, congelada; o homelab segue com a imagem que já tem em cache. Rever quando o MinIO da `utils` for atualizado.
