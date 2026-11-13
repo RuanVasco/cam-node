@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Status | rascunho |
+| Status | aprovada |
 | Autor | Ruan Vasconcelos |
 | Criada em | 2026-11-13 |
-| Aprovada em | |
+| Aprovada em | 2026-11-13 |
 
 ## Problema
 
@@ -108,3 +108,4 @@ Somente leitura da tabela de toques criada pela SPEC-001.
 | Data | Mudança |
 |---|---|
 | 2026-11-13 | Criação |
+| 2026-11-13 | Aprovada |

@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Status | rascunho |
+| Status | aprovada |
 | Autor | Ruan Vasconcelos |
 | Criada em | 2026-11-13 |
-| Aprovada em | |
+| Aprovada em | 2026-11-13 |
 
 ## Problema
 
@@ -20,6 +20,7 @@ O dispositivo (campainha real ou simulador) detecta o botão, captura uma foto e
 - Fila offline no dispositivo: toque sem rede é perdido.
 - Mais de um dispositivo com chaves distintas. Existe uma chave só.
 - Som interno, notificação push, vídeo ao vivo.
+- Retorno visual ao visitante (LED). Entra no produto final, não no MVP.
 - Retenção e exclusão de fotos antigas.
 
 ## Regras de negócio
@@ -32,7 +33,7 @@ O dispositivo (campainha real ou simulador) detecta o botão, captura uma foto e
 - **#6** Toque e foto são atômicos do ponto de vista de quem consulta: se a foto não puder ser guardada, o toque não aparece no histórico.
 - **#7** Todo toque registrado é avisado aos clientes conectados (SPEC-002 #4).
 - **#8** O dispositivo ignora novos acionamentos do botão por 5 s após um envio, para um toque não virar vários.
-- **#9** O dispositivo sinaliza o resultado ao visitante: LED aceso durante o envio e piscada curta em caso de falha.
+- **#9** Removida em 2026-11-13: retorno por LED saiu do MVP.
 
 ## Critérios de aceite
 
@@ -79,7 +80,7 @@ Tabela nova de toques (expand, sem impacto em estrutura existente): identificado
 
 ## Interface
 
-Sem tela. No dispositivo, apenas o LED (#9).
+Sem tela.
 
 ## Riscos e decisões
 
@@ -92,3 +93,4 @@ Sem tela. No dispositivo, apenas o LED (#9).
 | Data | Mudança |
 |---|---|
 | 2026-11-13 | Criação |
+| 2026-11-13 | Removida a #9 (LED), aprovada |
