@@ -1,8 +1,12 @@
 services:
-  app:
+  simulator:
     build:
       context: .
-      dockerfile: Dockerfile
+    environment:
+      API_URL: ${API_URL:-http://host.docker.internal:8080}
+      DEVICE_API_KEY: ${DEVICE_API_KEY:-local-device-key}
+      PHOTO_PATH: /photos/sample.jpg
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./out:/out
-    command: sh -c "cp /build/app.exe /out/app.exe && /out/app.exe"
+      - ./photos:/photos:ro
