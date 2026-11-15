@@ -1,0 +1,39 @@
+server {
+  listen 8080;
+  root /usr/share/nginx/html;
+
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+
+  # Rule: SPEC-002 #4 and #5. Events must reach the browser as they happen, and the connection lives far longer
+  # than the heartbeat interval.
+  location = /api/v1/rings/stream {
+    proxy_pass http://${API_UPSTREAM};
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 1h;
+  }
+
+  # Rule: SPEC-001 #4. Room for the 2 MB photo plus the multipart envelope; the API rejects anything larger.
+  location /api/ {
+    proxy_pass http://${API_UPSTREAM};
+    client_max_body_size 3m;
+  }
+
+  # Probe target for Kubernetes, same path as the other homelab frontends.
+  location = /nginx-health {
+    access_log off;
+    return 200;
+  }
+
+  location = /index.html {
+    add_header Cache-Control "no-cache";
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}
