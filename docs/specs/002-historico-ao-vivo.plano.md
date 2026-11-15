@@ -12,7 +12,8 @@ Depende da base do backend e da tabela `ring` do plano da SPEC-001.
 ### 2. Notificação (`notification/`)
 
 - `SseRingNotifier` escutando o evento `RingRegistered` (`@EventListener`), com a lista de `SseEmitter` em memória (ADR-001) e o endpoint `GET /api/v1/rings/stream`.
-- Sinal de vida agendado (`@Scheduled`), com intervalo por configuração, padrão 30 s (#5); emissor que falha ao enviar é removido.
+- Sinal de vida num agendador de thread única do próprio notificador, com intervalo por configuração, padrão 30 s (#5); emissor que falha ao enviar é removido. Toda escrita no stream (evento e sinal de vida) passa por esse thread, para o upload não esperar cliente lento.
+- O notificador fecha os streams antes do graceful shutdown do servidor web (`SmartLifecycle`), senão as conexões abertas seguram o desligamento até o timeout.
 
 ### 3. Frontend
 

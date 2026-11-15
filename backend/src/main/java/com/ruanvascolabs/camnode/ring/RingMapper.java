@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 import com.ruanvascolabs.camnode.ring.dto.RingPageResponse;
 import com.ruanvascolabs.camnode.ring.dto.RingResponse;
 
-final class RingMapper {
+public final class RingMapper {
 
     private RingMapper() {
     }
@@ -19,6 +19,10 @@ final class RingMapper {
     static RingPageResponse toPageResponse(Page<Ring> page) {
         return new RingPageResponse(
                 page.map(RingMapper::toResponse).getContent(), page.getNumber(), page.getSize(), page.getTotalElements());
+    }
+
+    public static RingResponse toResponse(RingRegistered event) {
+        return new RingResponse(event.id(), event.ringedAt(), photoUrl(event.id()));
     }
 
     static String photoUrl(UUID id) {

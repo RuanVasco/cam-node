@@ -47,3 +47,7 @@ camnode:
     bucket: ${PHOTO_STORAGE_BUCKET:cam-node-photos}
     access-key: ${PHOTO_STORAGE_ACCESS_KEY:camnode}
     secret-key: ${PHOTO_STORAGE_SECRET_KEY:camnode-secret}
+  notification:
+    # Below the Cloudflare idle timeout (about 100 s).
+    heartbeat-interval: 30s
+    subscription-timeout: 30m
