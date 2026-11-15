@@ -52,7 +52,7 @@ Segue a seção Deploy do `CLAUDE.md`:
 
 ## Arquivos afetados
 
-`backend/**`, `frontend/**`, `.github/workflows/**`, e os repositórios `../infra` e `../gitops`.
+`backend/**`, `frontend/**`, `.github/workflows/**`, e os repositórios `infra` e `gitops`.
 
 ## Riscos
 

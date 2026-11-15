@@ -29,7 +29,7 @@ Sem login no frontend no MVP. Fora do MVP, planejado: notificação push (Web Pu
 
 | Camada | Tecnologia |
 |---|---|
-| Runtime | Java 25 (LTS). O JDK local 26 em `C:\jdk\jdk-26.0.2` compila com `release 25` |
+| Runtime | Java 25 (LTS). Qualquer JDK 25 ou mais novo no `JAVA_HOME` compila com `release 25` |
 | Backend | Spring Boot 4.1.x (Spring Framework 7.0.x), Maven, `application.yml` |
 | Banco | PostgreSQL (LXC `db` do homelab) |
 | Migrations | Flyway (gerenciado pelo Boot) |
@@ -86,7 +86,7 @@ Comenta-se: regra de negócio com origem externa, decisão técnica com a altern
 Não se comenta: o que o código já diz, getter, setter, construtor, bloco decorativo, cabeçalho de autor ou data, código comentado, histórico de alteração.
 
 - Se o comentário precisa explicar o que o método faz, o problema é o nome ou o tamanho do método.
-- Comentário desatualizado bloqueia o PR.
+- Comentário desatualizado bloqueia o commit.
 - Javadoc e TSDoc apenas em API pública consumida por outro módulo, e só quando acrescentam algo além da assinatura.
 - Comentário de regra de negócio aponta a spec de origem: `Rule: SPEC-001 #3`.
 
@@ -98,8 +98,8 @@ A especificação é a fonte da verdade, o código é a implementação dela. N�
 2. Aprovação: discordância sobre comportamento se resolve no markdown, não no código.
 3. Plano: passos, arquivos afetados, ordem e risco de rolling, em `docs/specs/NNN-nome-curto.plano.md`.
 4. Implementação: cada regra numerada vira pelo menos um teste, que cita o identificador da regra no nome ou no display name.
-   Cada etapa do plano passa por três rodadas de code review antes da seguinte: etapa 1, review 1, correção 1, review 2, correção 2, review 3, correção 3, commit, etapa 2. A rodada sem achado conta como rodada; a correção dela fica vazia.
-5. Fechamento: o que mudou durante a implementação volta para a spec no mesmo PR.
+   Cada etapa do plano passa por três rodadas de code review antes da seguinte: etapa 1, review 1, correção 1, review 2, correção 2, review 3, correção 3, commit, push, etapa 2. A rodada sem achado conta como rodada; a correção dela fica vazia.
+5. Fechamento: o que mudou durante a implementação volta para a spec no mesmo commit da etapa.
 
 - Identificador de regra estável (`SPEC-001 #3`), nunca reaproveitado nem renumerado.
 - Spec descreve comportamento observável, não implementação.
@@ -107,7 +107,7 @@ A especificação é a fonte da verdade, o código é a implementação dela. N�
 - Contrato de API definido na spec antes da implementação, incluindo erros e códigos de status.
 - Decisão que atravessa várias funcionalidades vai para `docs/adr/NNN-titulo.md` (modelo em `docs/adr/TEMPLATE.md`).
 - Spec pequena. Se não cabe em uma página, são duas funcionalidades.
-- Correção de bug referencia a regra violada; se nenhuma cobre, a spec é atualizada no mesmo PR.
+- Correção de bug referencia a regra violada; se nenhuma cobre, a spec é atualizada no mesmo commit.
 
 ## Commits
 
@@ -263,16 +263,16 @@ Liveness não checa banco. Readiness checa.
 
 ## Deploy
 
-Mesmo modelo dos outros apps do homelab (referência: `apematch` no gitops e o workflow do `formulei`). Repositórios ao lado deste:
+Mesmo modelo dos outros apps do homelab (referência: `apematch` no gitops e o workflow do `formulei`). Repositórios envolvidos:
 
-- `../infra` (Terraform e Ansible): Postgres no LXC `db` (10.0.0.21), MinIO na VM `utils` (10.0.0.22:9000), Infisical na `utils` (:8088), k3s em 10.0.0.23, rotas do Cloudflare tunnel em `terraform/tunnel.tf`.
-- `../gitops` (ArgoCD): `argocd-apps/cam-node.yaml` e manifests em `apps/cam-node/`.
+- `infra` (Terraform e Ansible): Postgres no LXC `db` (10.0.0.21), MinIO na VM `utils` (10.0.0.22:9000), Infisical na `utils` (:8088), k3s em 10.0.0.23, rotas do Cloudflare tunnel em `terraform/tunnel.tf`.
+- `gitops` (ArgoCD): `argocd-apps/cam-node.yaml` e manifests em `apps/cam-node/`.
 
 Pipeline: GitHub Actions faz build e testes, publica `ghcr.io/ruanvasco/cam-node-{api,frontend}:<sha>` e atualiza a tag no gitops com `sed`. O repositório fica na conta pessoal (`RuanVasco/cam-node`), não na organização `ruanvasco-labs`, que é para projetos comerciais; por isso `GITOPS_DEPLOY_KEY` é segredo do próprio repositório (deploy key com escrita no `gitops`) e o `GHCR_PULL_TOKEN` precisa de `read:packages` da conta pessoal. O ArgoCD sincroniza. Artefato sempre versionado por commit.
 
 No k3s, namespace `cam-node`, réplica única: `cam-node-frontend` (nginx, entrada do tunnel em `campainha.formulei.com.br`) e `cam-node-api` (Spring, perfil `prd`, probes do actuator, `/actuator/prometheus` raspado pelo Alloy). Segredos do Infisical via External Secrets (projeto `cam-node`, slug `cam-node-n-yb8`, ambiente `prod`).
 
-Mudanças necessárias em `../infra`: banco e usuário `camnode` com entrada em `pg_clients` para 10.0.0.23, entrada em `minio_app_users` (usuário `camnode`, bucket `cam-node-photos`), item `campainha` em `tunnel_routes`.
+Mudanças necessárias no `infra`: banco e usuário `camnode` com entrada em `pg_clients` para 10.0.0.23, entrada em `minio_app_users` (usuário `camnode`, bucket `cam-node-photos`), item `campainha` em `tunnel_routes`.
 
 ## Preparado para rolling deploy
 
@@ -291,16 +291,15 @@ Mudanças necessárias em `../infra`: banco e usuário `camnode` com entrada em 
 
 ## Convenções de trabalho
 
-- Branch em inglês: `type/short-description`.
-- PR pequeno, com o que muda e por que muda.
+- Trabalho direto na `main`, sem branch nem PR, enquanto o projeto não estiver em produção.
 - Dependência nova exige justificativa: manutenção ativa, licença compatível e ganho real.
 - Código morto é removido, não comentado. `TODO` sempre com contexto e condição para resolver.
 
 ## Regras operacionais para o Claude
 
 - Não escrever código de funcionalidade sem spec aprovada. Se a tarefa chega sem spec, escrever a spec primeiro e apresentar para aprovação.
-- Commitar aos poucos: unidade lógica pronta e suíte verde vira commit, sem pedir autorização a cada um. Push e PR exigem pedido explícito.
-- Não adicionar coautoria, trailer de ferramenta ou assinatura de agente em commit ou PR.
+- Commitar aos poucos: unidade lógica pronta e suíte verde vira commit, sem pedir autorização a cada um. Ao fechar uma etapa do plano (três rodadas de review e suíte verde), dar push na `main` e seguir para a próxima etapa sem esperar retorno.
+- Não adicionar coautoria, trailer de ferramenta ou assinatura de agente em commit.
 - Antes de criar arquivo, classe ou abstração nova, procurar equivalente no repositório.
 - Ao terminar uma tarefa, rodar build, lint e testes e relatar o resultado real, inclusive falhas.
 - Decidir sozinho o que for rotina. Perguntar quando duas leituras da tarefa levariam a trabalhos diferentes.
