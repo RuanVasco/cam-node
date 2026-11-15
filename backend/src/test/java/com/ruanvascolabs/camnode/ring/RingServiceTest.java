@@ -14,12 +14,15 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ruanvascolabs.camnode.photo.PhotoStorage;
@@ -92,5 +95,25 @@ class RingServiceTest {
         Ring ring = service.register(TestPhotos.jpeg(1024));
 
         verify(events).publishEvent(new RingRegistered(ring.getId(), NOW));
+    }
+
+    @Test
+    @DisplayName("SPEC-002 #2: page size above 100 is capped at 100")
+    void capsPageSize() {
+        when(repository.findAllByOrderByRingedAtDescIdDesc(any())).thenReturn(Page.empty());
+
+        service.history(0, 500);
+
+        verify(repository).findAllByOrderByRingedAtDescIdDesc(PageRequest.of(0, 100));
+    }
+
+    @Test
+    @DisplayName("SPEC-002 #3: photo of an unknown ring is not found and storage is not touched")
+    void photoOfUnknownRing() {
+        UUID id = UUID.randomUUID();
+        when(repository.findById(id)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.photo(id)).isInstanceOf(RingNotFoundException.class);
+        verify(photoStorage, never()).open(anyString());
     }
 }

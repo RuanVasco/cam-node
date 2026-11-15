@@ -6,7 +6,7 @@ Depende da base do backend e da tabela `ring` do plano da SPEC-001.
 
 ### 1. Leitura no backend (`ring/`)
 
-- `GET /api/v1/rings`: `Pageable` com padrão 20 e `spring.data.web.pageable.max-page-size: 100` (#2), resposta em DTO próprio de página (`content`, `page`, `size`, `totalElements`), sem expor o `Page` do Spring.
+- `GET /api/v1/rings`: parâmetros `page` e `size` explícitos com Bean Validation (o resolver de `Pageable` troca página negativa por 0 em silêncio, e a spec pede 400); o serviço limita `size` a 100 (#2). Resposta em DTO próprio de página (`content`, `page`, `size`, `totalElements`), sem expor o `Page` do Spring. Erros de parâmetro (validação e conversão) com texto PT-BR no `ApiExceptionHandler`.
 - `GET /api/v1/rings/{id}/photo`: busca o toque, abre o objeto pela porta `PhotoStorage` e devolve em streaming com `Cache-Control: public, max-age=31536000, immutable` (#3); toque inexistente vira `RingNotFoundException`, 404.
 
 ### 2. Notificação (`notification/`)

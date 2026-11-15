@@ -8,6 +8,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.ruanvascolabs.camnode.photo.JpegSignature;
@@ -15,6 +17,9 @@ import com.ruanvascolabs.camnode.photo.PhotoStorage;
 
 @Service
 class RingService {
+
+    /** Rule: SPEC-002 #2. */
+    static final int MAX_PAGE_SIZE = 100;
 
     private static final DateTimeFormatter KEY_DATE = DateTimeFormatter.ofPattern("yyyy/MM/dd").withZone(ZoneOffset.UTC);
 
@@ -51,5 +56,15 @@ class RingService {
         Ring ring = repository.save(new Ring(ringedAt, photoKey, photo.length));
         events.publishEvent(new RingRegistered(ring.getId(), ring.getRingedAt()));
         return ring;
+    }
+
+    /** Rule: SPEC-002 #2. Sizes above the maximum are capped, not rejected. */
+    Page<Ring> history(int page, int size) {
+        return repository.findAllByOrderByRingedAtDescIdDesc(PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)));
+    }
+
+    RingPhoto photo(UUID id) {
+        Ring ring = repository.findById(id).orElseThrow(() -> new RingNotFoundException(id));
+        return new RingPhoto(photoStorage.open(ring.getPhotoKey()), ring.getPhotoSizeBytes());
     }
 }
