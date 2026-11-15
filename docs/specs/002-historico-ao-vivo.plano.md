@@ -18,7 +18,8 @@ Depende da base do backend e da tabela `ring` do plano da SPEC-001.
 ### 3. Frontend
 
 - Projeto Angular 22 em `frontend/`: standalone, zoneless, Angular Material, locale `pt-BR` registrado, ícones Material Symbols em SVG registrados no `MatIconRegistry`.
-- `features/ring/ring.service.ts`: busca páginas por `HttpClient` e expõe o stream do `EventSource` convertido em modelo de domínio; ao reabrir a conexão depois de erro, recarrega a primeira página (#9).
+- `features/ring/ring-api.ts` (páginas por `HttpClient`) e `ring-stream.ts` (`EventSource` convertido em modelo de domínio; abre uma conexão nova quando o navegador desiste de reconectar, por exemplo depois de um 502 durante o restart da API).
+- `features/ring/ring.service.ts`: estado em signals, junta páginas e toques ao vivo sem repetir id; ao reabrir o stream depois de erro, recarrega a primeira página (#9).
 - `features/ring/ring-history/`: estado em signals; `computed` que agrupa por dia no fuso `America/Sao_Paulo` com rótulos "Hoje", "Ontem" ou a data (#6, #7); destaque de 10 s no toque novo (#8); estado vazio (#10); "Carregar mais"; diálogo com a foto ampliada.
 - Indicador "Ao vivo" ou "Reconectando" na barra superior.
 - Textos de tela centralizados em um arquivo de mensagens PT-BR.

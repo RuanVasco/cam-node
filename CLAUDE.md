@@ -54,8 +54,9 @@ Comandos (atualizar assim que cada parte existir):
 docker compose up -d          # Postgres e MinIO locais
 cd backend && ./mvnw clean verify   # build, testes unitários (surefire) e de integração *IT (failsafe, Docker ligado)
 cd backend && ./mvnw spring-boot:run # backend local, usa o compose da raiz
-npm ci && npm start           # frontend local
-npm run build                 # build de produção do front
+cd frontend && npm ci && npm start   # frontend local (Node 24), proxy de /api para o backend em :8080
+cd frontend && npm test -- --watch=false && npm run lint && npm run format:check   # testes (Vitest), lint e formato do front
+cd frontend && npm run build  # build de produção do front
 pio run -d doorbell -t upload # grava o firmware (WIFI_SSID, WIFI_PASS, API_URL, DEVICE_API_KEY no ambiente)
 docker compose -f tools/simulator/docker-compose.yml run --build --rm simulator   # simulador do ESP: envia photos/sample.jpg (API_URL e DEVICE_API_KEY opcionais, padrão é o backend local)
 ```

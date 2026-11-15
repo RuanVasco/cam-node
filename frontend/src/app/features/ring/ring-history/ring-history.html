@@ -1,0 +1,44 @@
+@if (!loaded()) {
+  <div class="state">
+    <mat-progress-spinner mode="indeterminate" diameter="40" />
+  </div>
+} @else if (isEmpty()) {
+  <div class="state">
+    <mat-icon svgIcon="notifications-off" aria-hidden="true" />
+    <p>{{ messages.history.empty }}</p>
+  </div>
+} @else {
+  @for (day of days(); track day.key) {
+    <section>
+      <h2>{{ day.label }}</h2>
+      <ul>
+        @for (item of day.items; track item.ring.id) {
+          <li [class.highlighted]="item.highlighted">
+            <button
+              type="button"
+              class="thumb"
+              (click)="openPhoto(item.ring)"
+              [attr.aria-label]="item.openLabel"
+            >
+              <img
+                [src]="item.ring.photoUrl"
+                [alt]="messages.history.photoAlt"
+                loading="lazy"
+                width="160"
+                height="120"
+              />
+            </button>
+            <time [attr.datetime]="item.isoTime">{{ item.time }}</time>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+  @if (hasMore()) {
+    <div class="more">
+      <button mat-stroked-button type="button" (click)="loadMore()" [disabled]="loadingMore()">
+        {{ messages.history.loadMore }}
+      </button>
+    </div>
+  }
+}

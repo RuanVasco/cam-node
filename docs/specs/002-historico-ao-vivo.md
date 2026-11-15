@@ -42,7 +42,7 @@ Tela única com o histórico de toques agrupado por dia, foto ampliável, e atua
 - **CA-4** Dado um id inexistente, quando peço a foto, então 404. Cobre #3.
 - **CA-5** Dado um cliente no stream, quando um toque é registrado, então ele recebe o evento `ring` em até 2 s. Cobre #4.
 - **CA-6** Dado um cliente no stream sem toques por 65 s, então ele recebeu pelo menos dois sinais de vida e a conexão segue aberta. Cobre #5.
-- **CA-7** Dado um toque às 2026-11-23T01:30:00Z, então a tela mostra 22 nov. 2026, 22:30. Cobre #6, #7.
+- **CA-7** Dado um toque às 2026-11-23T01:30:00Z, então ele aparece no grupo do dia 22 de novembro de 2026 com o horário 22:30, e a foto ampliada mostra 22 de nov. de 2026, 22:30. Cobre #6, #7.
 - **CA-8** Dada a tela aberta, quando chega um toque, então ele aparece no topo, destacado, sem recarga. Cobre #8.
 - **CA-9** Dado o stream caído e um toque registrado durante a queda, quando reconecta, então o toque aparece. Cobre #9.
 
@@ -93,7 +93,7 @@ Somente leitura da tabela de toques criada pela SPEC-001.
 
 ## Interface
 
-- Barra superior com o título "Campainha" e um indicador de conexão ("Ao vivo" ou "Reconectando").
+- Barra superior com o título "Campainha" e um indicador de conexão: "Conectando" até o stream abrir pela primeira vez, depois "Ao vivo" ou "Reconectando".
 - Lista agrupada por dia; cada item mostra a miniatura da foto e o horário.
 - Clicar na miniatura abre a foto ampliada em diálogo.
 - Botão "Carregar mais" ao fim da lista.
@@ -109,3 +109,4 @@ Somente leitura da tabela de toques criada pela SPEC-001.
 |---|---|
 | 2026-11-13 | Criação |
 | 2026-11-13 | Aprovada |
+| 2026-11-15 | CA-7 com o formato de data do pt-BR; estado "Conectando" no indicador |

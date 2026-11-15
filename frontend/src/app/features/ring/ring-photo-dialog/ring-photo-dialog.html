@@ -1,0 +1,9 @@
+<div class="header">
+  <span class="caption">{{ caption }}</span>
+  <button mat-icon-button mat-dialog-close [attr.aria-label]="messages.photoDialog.close">
+    <mat-icon svgIcon="close" />
+  </button>
+</div>
+<mat-dialog-content>
+  <img [src]="ring.photoUrl" [alt]="messages.history.photoAlt" />
+</mat-dialog-content>
