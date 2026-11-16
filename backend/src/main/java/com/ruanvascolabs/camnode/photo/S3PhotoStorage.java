@@ -5,6 +5,7 @@ import java.io.InputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 class S3PhotoStorage implements PhotoStorage {
 
@@ -32,6 +33,8 @@ class S3PhotoStorage implements PhotoStorage {
     public InputStream open(String key) {
         try {
             return s3.getObject(request -> request.bucket(bucket).key(key));
+        } catch (NoSuchKeyException e) {
+            throw new PhotoNotFoundException(key);
         } catch (SdkException e) {
             throw new PhotoStorageUnavailableException(e);
         }

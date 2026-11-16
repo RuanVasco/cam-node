@@ -73,7 +73,7 @@ Erros: 400 para `page` negativo ou acima de 1.000.000, ou `size` menor que 1.
 GET /api/v1/rings/{id}/photo
 ```
 
-200 com o JPEG. 404 quando o toque não existe.
+200 com o JPEG. 404 quando o toque não existe ou a foto dele não está no armazenamento. 503 quando o armazenamento está indisponível.
 
 ```
 GET /api/v1/rings/stream
@@ -114,3 +114,4 @@ Somente leitura da tabela de toques criada pela SPEC-001.
 | 2026-11-15 | CA-7 com o formato de data do pt-BR; estado "Conectando" no indicador |
 | 2026-11-16 | #11 e CA-10: sinal de vida ao abrir o stream (a tela ficava até 30 s em "Conectando" atrás do Cloudflare) |
 | 2026-11-16 | Contrato: 400 para `page` acima de 1.000.000 (antes respondia 500 por estouro do offset) |
+| 2026-11-16 | Contrato da foto: 404 quando o objeto não está no armazenamento (antes 503, que sugeria tentar de novo) e 503 documentado |

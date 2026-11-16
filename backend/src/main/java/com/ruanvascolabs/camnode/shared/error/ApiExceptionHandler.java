@@ -15,6 +15,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.ruanvascolabs.camnode.device.InvalidDeviceKeyException;
+import com.ruanvascolabs.camnode.photo.PhotoNotFoundException;
 import com.ruanvascolabs.camnode.photo.PhotoStorageUnavailableException;
 import com.ruanvascolabs.camnode.ring.EmptyPhotoException;
 import com.ruanvascolabs.camnode.ring.RingNotFoundException;
@@ -58,6 +59,13 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(RingNotFoundException.class)
     ProblemDetail ringNotFound() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Toque não encontrado.");
+    }
+
+    // The ring exists but its object does not: data loss, not an outage, so retrying would not help.
+    @ExceptionHandler(PhotoNotFoundException.class)
+    ProblemDetail photoNotFound(PhotoNotFoundException e) {
+        log.warn("Ring photo missing from storage: {}", e.getMessage());
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Foto não encontrada.");
     }
 
     @ExceptionHandler(PhotoStorageUnavailableException.class)

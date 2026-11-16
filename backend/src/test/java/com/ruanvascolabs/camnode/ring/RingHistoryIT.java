@@ -118,6 +118,15 @@ class RingHistoryIT {
     }
 
     @Test
+    @DisplayName("SPEC-002 #3: ring whose photo object is missing from storage is 404, not a retryable 503")
+    void missingPhotoObject() {
+        UUID id = repository.save(new Ring(FIRST_RING, "missing/photo.jpg", 1)).getId();
+
+        assertThat(statusOf("/api/v1/rings/" + id + "/photo")).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(bodyOf("/api/v1/rings/" + id + "/photo")).contains("Foto não encontrada.");
+    }
+
+    @Test
     @DisplayName("SPEC-002 #3: malformed ring id is rejected with a PT-BR message")
     void malformedId() {
         assertThat(statusOf("/api/v1/rings/not-a-uuid/photo")).isEqualTo(HttpStatus.BAD_REQUEST);
