@@ -1,5 +1,6 @@
 #include <unity.h>
 
+#include "beep_pattern.h"
 #include "debouncer.h"
 #include "multipart.h"
 #include "retry_policy.h"
@@ -97,6 +98,47 @@ void test_spec003_r9_handshake_is_bounded_well_below_the_core_default() {
   TEST_ASSERT_GREATER_THAN_UINT32(0, send_timing::kHandshakeTimeoutS);
 }
 
+uint32_t totalOnMs(const BeepPattern& pattern) {
+  uint32_t total = 0;
+  for (size_t step = 0; step < pattern.stepCount; step += 2) {
+    total += pattern.stepsMs[step];
+  }
+  return total;
+}
+
+void test_spec011_r1_press_beep_is_one_short_tone() {
+  TEST_ASSERT_EQUAL_UINT32(1, beep_pattern::kPressAccepted.stepCount);
+  TEST_ASSERT_EQUAL_UINT16(100, beep_pattern::kPressAccepted.stepsMs[0]);
+}
+
+void test_spec011_r3_delivered_is_two_short_tones() {
+  const BeepPattern& delivered = beep_pattern::kDelivered;
+  TEST_ASSERT_EQUAL_UINT32(3, delivered.stepCount);
+  TEST_ASSERT_EQUAL_UINT16(80, delivered.stepsMs[0]);
+  TEST_ASSERT_EQUAL_UINT16(80, delivered.stepsMs[1]);
+  TEST_ASSERT_EQUAL_UINT16(80, delivered.stepsMs[2]);
+}
+
+void test_spec011_r4_lost_is_one_tone_much_longer_than_the_press_beep() {
+  TEST_ASSERT_EQUAL_UINT32(1, beep_pattern::kLost.stepCount);
+  TEST_ASSERT_EQUAL_UINT16(600, beep_pattern::kLost.stepsMs[0]);
+  TEST_ASSERT_GREATER_OR_EQUAL_UINT32(4 * totalOnMs(beep_pattern::kPressAccepted), totalOnMs(beep_pattern::kLost));
+}
+
+void test_spec011_r4_patterns_back_to_back_stay_separate_sounds() {
+  TEST_ASSERT_GREATER_OR_EQUAL_UINT16(beep_pattern::kDelivered.stepsMs[1], beep_pattern::kGapMs);
+}
+
+void test_spec011_r3_r4_only_2xx_counts_as_delivered() {
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kDelivered, &beep_pattern::forSendResult(200));
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kDelivered, &beep_pattern::forSendResult(201));
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kLost, &beep_pattern::forSendResult(-1));
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kLost, &beep_pattern::forSendResult(0));
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kLost, &beep_pattern::forSendResult(301));
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kLost, &beep_pattern::forSendResult(401));
+  TEST_ASSERT_EQUAL_PTR(&beep_pattern::kLost, &beep_pattern::forSendResult(503));
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_spec003_r3_noise_shorter_than_50ms_is_not_a_press);
@@ -110,5 +152,10 @@ int main() {
   RUN_TEST(test_spec001_contract_multipart_carries_jpeg_in_photo_field);
   RUN_TEST(test_spec003_r9_one_slow_attempt_fits_the_watchdog_with_room_for_dns);
   RUN_TEST(test_spec003_r9_handshake_is_bounded_well_below_the_core_default);
+  RUN_TEST(test_spec011_r1_press_beep_is_one_short_tone);
+  RUN_TEST(test_spec011_r3_delivered_is_two_short_tones);
+  RUN_TEST(test_spec011_r4_lost_is_one_tone_much_longer_than_the_press_beep);
+  RUN_TEST(test_spec011_r4_patterns_back_to_back_stay_separate_sounds);
+  RUN_TEST(test_spec011_r3_r4_only_2xx_counts_as_delivered);
   return UNITY_END();
 }

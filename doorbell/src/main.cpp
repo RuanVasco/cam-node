@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 
+#include "beep_pattern.h"
+#include "buzzer.h"
 #include "camera.h"
 #include "debouncer.h"
 #include "retry_policy.h"
@@ -38,20 +40,24 @@ void startWatchdog() {
 void sendRing() {
   if (!wifi_link::connected()) {
     Serial.println("[ring] no wifi, ring dropped");
+    buzzer::play(beep_pattern::kLost);
     return;
   }
 
   camera_fb_t* photo = camera::captureFresh();
   if (photo == nullptr) {
     Serial.println("[ring] capture failed, ring dropped");
+    buzzer::play(beep_pattern::kLost);
     return;
   }
   if (photo->len > kMaxPhotoBytes) {
     Serial.printf("[ring] photo too large (%u bytes), ring dropped\n", static_cast<unsigned>(photo->len));
     esp_camera_fb_return(photo);
+    buzzer::play(beep_pattern::kLost);
     return;
   }
 
+  int status = 0;
   for (int attempt = 1;; attempt++) {
     // Each attempt is bounded on its own; a hang inside one still trips the watchdog.
     esp_task_wdt_reset();
@@ -59,13 +65,15 @@ void sendRing() {
     ring_client::Result result = ring_client::send(photo->buf, photo->len);
     Serial.printf("[ring] attempt %d: %s (%u bytes, %lu ms)\n", attempt, result.description.c_str(),
                   static_cast<unsigned>(photo->len), static_cast<unsigned long>(millis() - startedMs));
-    if (!retry_policy::shouldRetry(result.status, attempt)) {
+    status = result.status;
+    if (!retry_policy::shouldRetry(status, attempt)) {
       break;
     }
     delay(retry_policy::kRetryDelayMs);
   }
 
   esp_camera_fb_return(photo);
+  buzzer::play(beep_pattern::forSendResult(status));
   ringGate.recordSend(millis());
 }
 
@@ -75,6 +83,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("[boot] cam-node doorbell");
   pinMode(BUTTON_PIN, INPUT_PULLUP);
+  buzzer::begin();
   startWatchdog();
 
   if (!psramFound()) {
@@ -97,6 +106,7 @@ void loop() {
   if (debouncer.pressed(rawPressed, nowMs)) {
     if (ringGate.allows(nowMs)) {
       Serial.println("[ring] button pressed");
+      buzzer::play(beep_pattern::kPressAccepted);
       sendRing();
     } else {
       Serial.println("[ring] button pressed during cooldown, ignored");

@@ -29,7 +29,7 @@ def read_dotenv(path):
 
 
 dotenv = read_dotenv(os.path.join(env.subst("$PROJECT_DIR"), ".env"))  # noqa: F821
-config = {name: os.environ.get(name) or dotenv.get(name, "") for name in REQUIRED + ("BUTTON_PIN",)}
+config = {name: os.environ.get(name) or dotenv.get(name, "") for name in REQUIRED + ("BUTTON_PIN", "BUZZER_PIN")}
 
 missing = [name for name in REQUIRED if not config[name]]
 if missing:
@@ -44,6 +44,13 @@ button_pin = config["BUTTON_PIN"] or "0"
 if not button_pin.isdigit():
     raise SystemExit("BUTTON_PIN must be a GPIO number, got: " + button_pin)
 
+buzzer_pin = config["BUZZER_PIN"] or "-1"
+if not (buzzer_pin.isdigit() or buzzer_pin == "-1"):
+    raise SystemExit("BUZZER_PIN must be a GPIO number, got: " + buzzer_pin)
+if buzzer_pin == button_pin:
+    raise SystemExit("BUZZER_PIN and BUTTON_PIN must be different GPIOs")
+
 defines = [(name, env.StringifyMacro(config[name])) for name in REQUIRED]  # noqa: F821
 defines.append(("BUTTON_PIN", int(button_pin)))
+defines.append(("BUZZER_PIN", int(buzzer_pin)))
 env.Append(CPPDEFINES=defines)  # noqa: F821
