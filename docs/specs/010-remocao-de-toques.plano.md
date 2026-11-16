@@ -77,3 +77,36 @@ CA-4 entre duas telas e CA-10 numa aba nova são conferidos à mão no navegador
 - Rolling: só a tabela nova `photo_deletion` (expand puro); a versão anterior não a conhece e não é afetada. Durante a troca de pod, uma remoção feita no pod novo não chega por SSE às telas ligadas no antigo; a reconexão recarrega a primeira página.
 - Bloqueio global: quem não tem a senha consegue travar a remoção por 15 min errando 5 vezes. Aceito enquanto a senha for provisória.
 - A senha fica no `sessionStorage` da aba; um XSS a leria. Aceito pelo mesmo motivo; sai com a SPEC-004.
+
+## Lixeira (#9 a #12)
+
+Mudança aprovada depois das etapas acima: excluir passa a ser público e leva à lixeira; a senha protege só a lixeira.
+
+### 5. Backend
+
+- Migration `removed_at` nullable em `ring`, com índice parcial para a lixeira (expand puro).
+- `RingService.remove`: um `update` que marca `removed_at` só onde ainda é nulo e confere a contagem (#6, #9). Histórico e foto pública ignoram toques na lixeira.
+- `TrashService` e `TrashController` em `ring/` (a entidade não sai da pasta): listar por `removed_at` decrescente, foto com `no-store`, restaurar (`RingRestored`) e apagar de vez com a fila de fotos que já existe (#3, #10 a #12).
+- `admin/`: o interceptor passa a guardar todos os métodos de `/api/v1/trash/**` e sai das rotas de exclusão.
+- `SseRingNotifier`: evento `ring-restored` com o mesmo corpo do `ring`.
+
+### 6. Frontend
+
+- Rotas: `/` (histórico) e `/lixeira`, com `@angular/router` (pacote oficial do Angular).
+- Histórico: "Excluir" sem senha; textos sem menção à lixeira (#9, CA-13). `ring-stream` e `RingService` tratam `ring-restored` inserindo o toque na posição do seu horário (#11).
+- `features/trash/`: serviço com a senha da aba (reaproveita `admin-key.store` e o diálogo de senha), lista paginada, foto baixada como blob pelo serviço (o header não vai numa tag de imagem), restaurar e apagar de vez com confirmação.
+
+| Teste | Tipo | Cobre |
+|---|---|---|
+| Excluir sem senha, toque na lixeira, foto pública 404, objeto mantido; senha enviada é ignorada | integração | CA-1, #9 |
+| Id já na lixeira no lote: 404 e nada excluído | integração | #6, #9 |
+| Lixeira em ordem de exclusão, com os dois horários e foto `no-store` | integração | CA-11, #10 |
+| Restaurar devolve id, horário e foto; fora da lixeira é 404 | integração | CA-12, #11 |
+| Apagar de vez remove linha e objeto; de novo, 404; toque do histórico não é apagado | integração | CA-7, #12 |
+| Sem senha ou com senha errada, todas as rotas da lixeira 401 | integração | CA-8 |
+| `ring-restored` chega em até 2 s | integração | CA-4 |
+| Restauração e exclusão concorrentes não anunciam nem enfileiram | unitário | #11, #12 |
+| `ring-restored` insere na posição do horário e não duplica | unitário do serviço | #11 |
+| Lixeira pede senha, lista, restaura e apaga com confirmação | unitário do serviço e do fluxo | #7, #10 a #12 |
+
+Rolling: durante a troca, o pod antigo ainda apaga de vez e mostra toques que o novo pôs na lixeira; dura só a troca de pod.

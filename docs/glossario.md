@@ -31,7 +31,10 @@ Ao criar termo novo, acrescentar aqui antes de usar no código.
 | Nível da bateria | `batteryPercent` | Carga da bateria em porcentagem, calculada no backend a partir da tensão. |
 | Notificação push | `pushNotification` | Aviso de toque entregue no celular mesmo com o app fechado (SPEC-009). |
 | Token de push | `pushToken` | Identificador de um celular no serviço de push, registrado pelo app. |
-| Remoção de toque | `ringRemoval` | Exclusão definitiva de um toque e da sua foto (SPEC-010). |
-| Senha de administrador | `adminApiKey` | Segredo enviado em header para remover toques enquanto não há login (SPEC-010 #7). |
-| Bloqueio de tentativas | `adminKeyLockout` | Recusa temporária da remoção depois de senhas de administrador erradas demais (SPEC-010 #8). |
-| Remoção pendente de foto | `PendingPhotoDeletion` | Foto de toque removido que ainda precisa ser apagada do armazenamento (SPEC-010 #3). |
+| Exclusão de toque | `ringRemoval` | Envio de um toque para a lixeira: some do histórico, mas pode ser restaurado (SPEC-010 #9). |
+| Lixeira | `trash` | Toques excluídos, visíveis só para o administrador (SPEC-010 #10). |
+| Restaurar | `restore` | Devolver um toque da lixeira ao histórico (SPEC-010 #11). |
+| Apagar de vez | `purge` | Remoção definitiva de um toque da lixeira e da sua foto (SPEC-010 #12). |
+| Senha de administrador | `adminApiKey` | Segredo enviado em header para acessar a lixeira enquanto não há login (SPEC-010 #7). |
+| Bloqueio de tentativas | `adminKeyLockout` | Recusa temporária do acesso à lixeira depois de senhas de administrador erradas demais (SPEC-010 #8). |
+| Remoção pendente de foto | `PendingPhotoDeletion` | Foto de toque apagado de vez que ainda precisa sair do armazenamento (SPEC-010 #3). |
