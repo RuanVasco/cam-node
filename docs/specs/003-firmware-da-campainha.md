@@ -62,6 +62,16 @@ Sem tela. Log serial em 115200 baud, uma linha por evento (conexão, toque, tent
 - Bot Fight Mode da Cloudflare pode desafiar um cliente que não é navegador; conferir com a placa real antes da apresentação.
 - O relógio do dispositivo não é usado para o momento do toque (SPEC-001 #5), mas a validação do certificado precisa da data certa: o firmware sincroniza a hora por NTP ao conectar.
 
+## Em aberto antes da aprovação
+
+| Pergunta | Por que importa |
+|---|---|
+| Modelo exato da placa (o que está impresso nela ou o link da compra) | O pinout da câmera muda entre as placas ESP32-S3-CAM e define o GPIO livre para o botão |
+| O botão já está ligado em algum pino? | Se não, o plano indica o GPIO; a ligação é entre o GPIO e o GND, sem resistor (pull-up interno) |
+| Tipo da rede WiFi do IF: senha simples (WPA2-Personal), portal de login ou WPA2-Enterprise | Com portal ou Enterprise a credencial fixa não conecta e vale o plano B (roteador ou hotspot) |
+
+Respondidas as perguntas e aprovada a spec, o próximo passo é o plano em `003-firmware-da-campainha.plano.md` e a implementação em `doorbell/` (PlatformIO, Arduino-ESP32 3.x), seguindo o fluxo do `CLAUDE.md`.
+
 ## Histórico
 
 | Data | Mudança |
