@@ -83,6 +83,7 @@ class RingRegistrationIT {
         var response = client.upload(null, "image/jpeg", RingUploadClient.DEVICE_KEY);
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.body()).contains("Campo obrigatório ausente na requisição.");
         assertThat(repository.count()).isZero();
     }
 
@@ -101,6 +102,7 @@ class RingRegistrationIT {
         var response = client.upload(TestPhotos.jpeg(2560 * 1024), "image/jpeg", RingUploadClient.DEVICE_KEY);
 
         assertThat(response.status()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE);
+        assertThat(response.body()).contains("A foto passa do tamanho máximo permitido.");
         assertThat(repository.count()).isZero();
     }
 }

@@ -2,7 +2,6 @@ package com.ruanvascolabs.camnode.shared.error;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -22,23 +21,21 @@ import com.ruanvascolabs.camnode.ring.RingNotFoundException;
 import com.ruanvascolabs.camnode.ring.UnsupportedPhotoFormatException;
 
 /**
- * Framework exceptions (missing part, upload too large) are handled by the superclass as Problem Details.
+ * Framework exceptions are handled by the superclass as Problem Details, with the PT-BR detail looked up in
+ * messages.properties ({@code problemDetail.<exception class>}).
  */
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    // The messages.properties key for this exception is ignored on Spring 7.0.x (the detail stays "Validation
+    // failure"), so it is set here. Move it there once a Spring upgrade makes RingHistoryIT pass that way.
     @Override
     protected ResponseEntity<Object> handleHandlerMethodValidationException(HandlerMethodValidationException ex,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        return badRequest(ex, headers, request, "Parâmetros inválidos.");
-    }
-
-    @Override
-    protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
-            HttpStatusCode status, WebRequest request) {
-        return badRequest(ex, headers, request, "Parâmetro em formato inválido.");
+        return handleExceptionInternal(ex, ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
+                "Parâmetros inválidos."), headers, HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(InvalidDeviceKeyException.class)
@@ -73,10 +70,5 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         log.error("Photo storage unavailable", e);
         return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE,
                 "O armazenamento de fotos está indisponível agora. Tente novamente.");
-    }
-
-    private ResponseEntity<Object> badRequest(Exception ex, HttpHeaders headers, WebRequest request, String detail) {
-        return handleExceptionInternal(ex, ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail), headers,
-                HttpStatus.BAD_REQUEST, request);
     }
 }

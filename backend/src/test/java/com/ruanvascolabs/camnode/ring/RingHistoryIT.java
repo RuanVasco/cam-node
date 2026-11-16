@@ -15,6 +15,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
@@ -131,6 +132,36 @@ class RingHistoryIT {
     void malformedId() {
         assertThat(statusOf("/api/v1/rings/not-a-uuid/photo")).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(bodyOf("/api/v1/rings/not-a-uuid/photo")).contains("Parâmetro em formato inválido.");
+    }
+
+    @Test
+    @DisplayName("PT-BR error detail: unknown route is 404")
+    void unknownRoute() {
+        assertThat(statusOf("/api/v1/nothing-here")).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(bodyOf("/api/v1/nothing-here")).contains("Endereço não encontrado.");
+    }
+
+    @Test
+    @DisplayName("PT-BR error detail: unsupported method is 405")
+    void unsupportedMethod() {
+        String body = client.delete().uri("/api/v1/rings").exchange((request, response) -> {
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+            return new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+        });
+
+        assertThat(body).contains("Método não permitido neste endereço.");
+    }
+
+    @Test
+    @DisplayName("PT-BR error detail: upload that is not multipart is 415")
+    void unsupportedMediaType() {
+        String body = client.post().uri("/api/v1/rings").contentType(MediaType.APPLICATION_JSON).body("{}")
+                .exchange((request, response) -> {
+                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+                    return new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8);
+                });
+
+        assertThat(body).contains("Tipo de conteúdo não suportado.");
     }
 
     private void saveRingsOneMinuteApart(int count) {
