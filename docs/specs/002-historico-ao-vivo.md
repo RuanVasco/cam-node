@@ -33,6 +33,7 @@ Tela única com o histórico de toques agrupado por dia, foto ampliável, e atua
 - **#8** Um toque novo entra no topo sem recarregar a página e fica destacado por 10 s.
 - **#9** Ao reconectar o stream depois de uma queda, a tela recarrega a primeira página, para não perder toques ocorridos durante a queda.
 - **#10** Sem toques, a tela mostra "Nenhum toque registrado ainda."
+- **#11** Ao abrir o stream, o servidor envia um sinal de vida na hora, para a conexão aparecer como aberta sem esperar o primeiro intervalo (proxies como o Cloudflare só repassam a resposta quando chega o primeiro dado).
 
 ## Critérios de aceite
 
@@ -45,6 +46,7 @@ Tela única com o histórico de toques agrupado por dia, foto ampliável, e atua
 - **CA-7** Dado um toque às 2026-11-23T01:30:00Z, então ele aparece no grupo do dia 22 de novembro de 2026 com o horário 22:30, e a foto ampliada mostra 22 de nov. de 2026, 22:30. Cobre #6, #7.
 - **CA-8** Dada a tela aberta, quando chega um toque, então ele aparece no topo, destacado, sem recarga. Cobre #8.
 - **CA-9** Dado o stream caído e um toque registrado durante a queda, quando reconecta, então o toque aparece. Cobre #9.
+- **CA-10** Dado o intervalo padrão de 30 s, quando um cliente abre o stream, então recebe um sinal de vida em até 2 s. Cobre #11.
 
 ## Contrato de API
 
@@ -110,3 +112,4 @@ Somente leitura da tabela de toques criada pela SPEC-001.
 | 2026-11-13 | Criação |
 | 2026-11-13 | Aprovada |
 | 2026-11-15 | CA-7 com o formato de data do pt-BR; estado "Conectando" no indicador |
+| 2026-11-16 | #11 e CA-10: sinal de vida ao abrir o stream (a tela ficava até 30 s em "Conectando" atrás do Cloudflare) |

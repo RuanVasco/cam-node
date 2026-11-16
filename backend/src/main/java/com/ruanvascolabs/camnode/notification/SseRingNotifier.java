@@ -50,8 +50,19 @@ class SseRingNotifier implements SmartLifecycle, DisposableBean {
         this.properties = properties;
     }
 
+    /**
+     * Rule: SPEC-002 #11. Cloudflare holds the response headers until the first body bytes, so without this heartbeat
+     * the browser only sees the stream open after a full interval. Sent before the emitter is registered, so the
+     * scheduler thread can not write to it at the same time; Spring buffers it until the response starts.
+     */
     SseEmitter subscribe() {
         SseEmitter emitter = new SseEmitter(properties.subscriptionTimeout().toMillis());
+        try {
+            emitter.send(SseEmitter.event().comment(HEARTBEAT_COMMENT));
+        } catch (IOException e) {
+            emitter.completeWithError(e);
+            return emitter;
+        }
         register(emitter);
         return emitter;
     }
