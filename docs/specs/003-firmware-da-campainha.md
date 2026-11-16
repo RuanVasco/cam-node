@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Status | rascunho |
+| Status | aprovada |
 | Autor | Ruan Vasconcelos |
 | Criada em | 2026-11-16 |
-| Aprovada em | |
+| Aprovada em | 2026-11-16 |
 
 ## Problema
 
