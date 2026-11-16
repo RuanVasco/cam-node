@@ -6,10 +6,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.MediaType;
@@ -27,10 +29,11 @@ import com.ruanvascolabs.camnode.ring.RingRegistered;
  *
  * <p>Stops before the web server's graceful shutdown (default phase), otherwise open streams would hold it until the
  * shutdown timeout. That phase also means it starts after the web server, so the executor exists from construction
- * and start only schedules the heartbeat.
+ * and start only schedules the heartbeat. Stop must leave the executor alive: Spring may stop and start the same bean
+ * again (the test context cache pauses idle contexts), so the executor is only shut down when the bean is destroyed.
  */
 @Component
-class SseRingNotifier implements SmartLifecycle {
+class SseRingNotifier implements SmartLifecycle, DisposableBean {
 
     private static final Logger log = LoggerFactory.getLogger(SseRingNotifier.class);
 
@@ -41,7 +44,7 @@ class SseRingNotifier implements SmartLifecycle {
     private final List<SseEmitter> subscribers = new CopyOnWriteArrayList<>();
     private final ScheduledExecutorService scheduler =
             Executors.newSingleThreadScheduledExecutor(Thread.ofPlatform().name("sse-notifier").daemon().factory());
-    private volatile boolean running;
+    private volatile ScheduledFuture<?> heartbeat;
 
     SseRingNotifier(NotificationProperties properties) {
         this.properties = properties;
@@ -71,8 +74,8 @@ class SseRingNotifier implements SmartLifecycle {
         try {
             scheduler.execute(() -> broadcast(SseEmitter.event().name(RING_EVENT).data(payload, MediaType.APPLICATION_JSON)));
         } catch (RejectedExecutionException e) {
-            // Shutting down: subscribers are already closed and the ring is saved, so the upload must not fail.
-            log.info("Ring {} not broadcast, notifier stopped", event.id());
+            // Bean destroyed: subscribers are already closed and the ring is saved, so the upload must not fail.
+            log.info("Ring {} not broadcast, notifier destroyed", event.id());
         }
     }
 
@@ -100,20 +103,27 @@ class SseRingNotifier implements SmartLifecycle {
     @Override
     public void start() {
         long interval = properties.heartbeatInterval().toMillis();
-        scheduler.scheduleAtFixedRate(this::sendHeartbeat, interval, interval, TimeUnit.MILLISECONDS);
-        running = true;
+        heartbeat = scheduler.scheduleAtFixedRate(this::sendHeartbeat, interval, interval, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void stop() {
-        running = false;
-        scheduler.shutdownNow();
+        ScheduledFuture<?> current = heartbeat;
+        if (current != null) {
+            current.cancel(false);
+            heartbeat = null;
+        }
         subscribers.forEach(SseEmitter::complete);
         subscribers.clear();
     }
 
     @Override
     public boolean isRunning() {
-        return running;
+        return heartbeat != null;
+    }
+
+    @Override
+    public void destroy() {
+        scheduler.shutdownNow();
     }
 }

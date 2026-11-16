@@ -41,13 +41,25 @@ class SseRingNotifierTest {
     }
 
     @Test
-    @DisplayName("SPEC-001 #7: a ring registered while the notifier is stopped does not fail the upload")
-    void ringAfterStopIsIgnored() {
+    @DisplayName("SPEC-001 #7: a ring registered after the notifier is destroyed does not fail the upload")
+    void ringAfterDestroyIsIgnored() {
         notifier.start();
         notifier.stop();
+        notifier.destroy();
 
         assertThatCode(() -> notifier.onRingRegistered(new RingRegistered(UUID.randomUUID(), Instant.EPOCH)))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("SPEC-002 #5: the notifier starts again after a stop, as when Spring pauses and resumes a context")
+    void restartsAfterStop() {
+        notifier.start();
+        notifier.stop();
+
+        assertThatCode(notifier::start).doesNotThrowAnyException();
+        assertThat(notifier.isRunning()).isTrue();
+        notifier.stop();
     }
 
     private static SseEmitter failingWith(Exception failure) {
