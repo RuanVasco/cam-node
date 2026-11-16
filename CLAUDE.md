@@ -2,7 +2,7 @@
 
 Guia de desenvolvimento do cam-node, uma campainha inteligente: um ESP32-S3-CAM (OV2640) com botão físico tira uma foto quando alguém toca e envia para o backend, que avisa o frontend web em tempo real. Vale para qualquer código deste repositório.
 
-## MVP (prazo: 2026-11-16; apresentação final: 2026-11-23)
+## MVP
 
 Apresentação feita de dentro do IF, numa rede que só libera saída HTTP/HTTPS. O dispositivo fala com o backend pela internet, pelo domínio público.
 
@@ -11,7 +11,7 @@ Apresentação feita de dentro do IF, numa rede que só libera saída HTTP/HTTPS
 3. Frontend mostra o histórico de toques por data e hora (mais recente primeiro), atualizando ao vivo.
 4. Tudo publicado no homelab (ver Deploy).
 
-Sem login no frontend no MVP. Fora do MVP, planejado: notificação push (Web Push ou FCM), MQTT, campainha interna reaproveitando a existente (optoacoplador ou relé), stream MJPEG ao vivo, deep sleep e bateria, configuração de WiFi dinâmica (WiFiManager e NVS).
+Cada spec diz no campo "Entrega" se faz parte do MVP ou não. Sem login no frontend no MVP. Fora do MVP, planejado: notificação push (Web Push ou FCM), MQTT, campainha interna reaproveitando a existente (optoacoplador ou relé), stream MJPEG ao vivo, deep sleep e bateria, configuração de WiFi dinâmica (WiFiManager e NVS).
 
 ## Estrutura do repositório
 
@@ -267,16 +267,16 @@ Liveness não checa banco. Readiness checa.
 
 ## Deploy
 
-Mesmo modelo dos outros apps do homelab (referência: `apematch` no gitops e o workflow do `formulei`). Repositórios envolvidos:
+Mesmo modelo dos outros apps do homelab. Repositórios envolvidos, ambos privados:
 
-- `infra` (Terraform e Ansible): Postgres no LXC `db` (10.0.0.21), MinIO na VM `utils` (10.0.0.22:9000), Infisical na `utils` (:8088), k3s em 10.0.0.23, rotas do Cloudflare tunnel em `terraform/tunnel.tf`.
-- `gitops` (ArgoCD): `argocd-apps/cam-node.yaml` e manifests em `apps/cam-node/`.
+- `infra` (Terraform e Ansible): Postgres no LXC `db`, MinIO e Infisical na VM `utils`, cluster k3s e rotas do Cloudflare tunnel.
+- `gitops` (ArgoCD): aplicação `cam-node` e seus manifests.
 
-Pipeline: GitHub Actions faz build e testes, publica `ghcr.io/ruanvasco/cam-node-{api,frontend}:<sha>` e atualiza a tag no gitops com `sed`. O repositório fica na conta pessoal (`RuanVasco/cam-node`), não na organização `ruanvasco-labs`, que é para projetos comerciais; por isso `GITOPS_DEPLOY_KEY` é segredo do próprio repositório (deploy key com escrita no `gitops`) e o `GHCR_PULL_TOKEN` precisa de `read:packages` da conta pessoal. O ArgoCD sincroniza. Artefato sempre versionado por commit.
+Pipeline: GitHub Actions faz build e testes, publica `ghcr.io/ruanvasco/cam-node-{api,frontend}:<sha>` e atualiza a tag no gitops com `sed`. `GITOPS_DEPLOY_KEY` (deploy key com escrita no `gitops`) é segredo deste repositório, e o `GHCR_PULL_TOKEN` do cluster precisa de `read:packages` da conta dona das imagens. O ArgoCD sincroniza. Artefato sempre versionado por commit.
 
-No k3s, namespace `cam-node`, réplica única: `cam-node-frontend` (nginx, entrada do tunnel em `campainha.formulei.com.br`) e `cam-node-api` (Spring, perfil `prd`, probes do actuator, `/actuator/prometheus` raspado pelo Alloy). Segredos do Infisical via External Secrets (projeto `cam-node`, slug `cam-node-n-yb8`, ambiente `prod`).
+No k3s, namespace `cam-node`, réplica única: `cam-node-frontend` (nginx, entrada do tunnel em `campainha.formulei.com.br`) e `cam-node-api` (Spring, perfil `prd`, probes do actuator, `/actuator/prometheus` raspado pelo Alloy). Segredos do Infisical via External Secrets (projeto `cam-node`, ambiente `prod`).
 
-Mudanças necessárias no `infra`: banco e usuário `camnode` com entrada em `pg_clients` para 10.0.0.23, entrada em `minio_app_users` (usuário `camnode`, bucket `cam-node-photos`), item `campainha` em `tunnel_routes`.
+Mudanças necessárias no `infra`: banco e usuário `camnode` liberados para o cluster, usuário e bucket próprios no MinIO e a rota `campainha` no tunnel.
 
 ## Preparado para rolling deploy
 

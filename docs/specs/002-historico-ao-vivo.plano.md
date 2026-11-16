@@ -47,7 +47,7 @@ Segue a seção Deploy do `CLAUDE.md`:
 1. Dockerfiles multi-stage da API e do frontend, `nginx.conf` (fallback para `index.html`, proxy de `/api/`, `proxy_buffering off` e `proxy_read_timeout` longo no stream) e `.dockerignore`.
 2. Workflows do GitHub Actions para `cam-node-api` e `cam-node-frontend` (build, testes, GHCR, atualização da tag no gitops). Antes: segredo `GITOPS_DEPLOY_KEY` no repositório e conferir se o `GHCR_PULL_TOKEN` do Infisical lê pacotes da conta pessoal.
 3. PR no `infra`: banco e usuário `camnode`, `pg_clients`, `minio_app_users`. Depois do apply: senha do MinIO em `/etc/minio-apps/camnode.env` e criação do banco.
-4. PR no `gitops`: `argocd-apps/cam-node.yaml`, `apps/cam-node/` (namespace, `SecretStore` com slug `cam-node-n-yb8`, `ExternalSecret`, deployments e services).
+4. PR no `gitops`: `argocd-apps/cam-node.yaml`, `apps/cam-node/` (namespace, `SecretStore` do projeto `cam-node`, `ExternalSecret`, deployments e services).
 5. PR no `infra` com o item `campainha` em `tunnel_routes`, aplicado só com o frontend rodando.
 6. Conferir o Bot Fight Mode da zona antes do teste com a placa.
 

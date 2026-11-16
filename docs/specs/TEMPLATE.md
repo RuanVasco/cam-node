@@ -3,6 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Status | rascunho / aprovada / implementada / substituída |
+| Entrega | MVP / fora do MVP |
 | Autor | |
 | Criada em | AAAA-MM-DD |
 | Aprovada em | |

@@ -2,7 +2,7 @@
 
 ## Ordem
 
-O backend vem primeiro e é validado com o simulador, sem depender da placa. O firmware entra quando a placa estiver em mãos (a partir de 2026-11-14).
+O backend vem primeiro e é validado com o simulador, sem depender da placa. O firmware entra quando a placa estiver em mãos.
 
 ### 1. Base do backend
 

@@ -3,6 +3,7 @@
 | Campo | Valor |
 |---|---|
 | Status | aprovada |
+| Entrega | MVP |
 | Autor | Ruan Vasconcelos |
 | Criada em | 2026-11-16 |
 | Aprovada em | 2026-11-16 |
