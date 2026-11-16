@@ -5,6 +5,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.UUID;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -30,6 +31,8 @@ class RingController {
 
     static final String BASE_PATH = "/api/v1/rings";
 
+    private static final int MAX_PAGE = 1_000_000;
+
     /** Rule: SPEC-002 #3. */
     private static final CacheControl PHOTO_CACHE = CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable();
 
@@ -46,10 +49,11 @@ class RingController {
     }
 
     // Explicit parameters instead of Pageable: its resolver silently turns a negative page into 0,
-    // and SPEC-002 requires a 400.
+    // and SPEC-002 requires a 400. The page ceiling keeps page * size (size capped at 100) inside the int offset
+    // Spring Data JPA accepts; above it the query fails with a 500.
     @GetMapping
     RingPageResponse history(
-            @RequestParam(defaultValue = "0") @PositiveOrZero int page,
+            @RequestParam(defaultValue = "0") @PositiveOrZero @Max(MAX_PAGE) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size) {
         return RingMapper.toPageResponse(service.history(page, size));
     }

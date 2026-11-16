@@ -67,7 +67,7 @@ Sucesso (200):
 }
 ```
 
-Erros: 400 para `page` negativo ou `size` menor que 1.
+Erros: 400 para `page` negativo ou acima de 1.000.000, ou `size` menor que 1.
 
 ```
 GET /api/v1/rings/{id}/photo
@@ -113,3 +113,4 @@ Somente leitura da tabela de toques criada pela SPEC-001.
 | 2026-11-13 | Aprovada |
 | 2026-11-15 | CA-7 com o formato de data do pt-BR; estado "Conectando" no indicador |
 | 2026-11-16 | #11 e CA-10: sinal de vida ao abrir o stream (a tela ficava até 30 s em "Conectando" atrás do Cloudflare) |
+| 2026-11-16 | Contrato: 400 para `page` acima de 1.000.000 (antes respondia 500 por estouro do offset) |

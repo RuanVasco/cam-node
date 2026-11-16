@@ -84,6 +84,13 @@ class RingHistoryIT {
     }
 
     @Test
+    @DisplayName("SPEC-002 #2: page above the maximum is rejected instead of failing")
+    void pageAboveMaximum() {
+        assertThat(statusOf("/api/v1/rings?page=100000000&size=100")).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyOf("/api/v1/rings?page=100000000&size=100")).contains("Parâmetros inválidos.");
+    }
+
+    @Test
     @DisplayName("SPEC-002 #2: size below 1 is rejected")
     void zeroSize() {
         assertThat(statusOf("/api/v1/rings?size=0")).isEqualTo(HttpStatus.BAD_REQUEST);
