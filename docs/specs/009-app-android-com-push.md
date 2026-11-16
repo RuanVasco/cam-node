@@ -32,6 +32,7 @@ App Android com login, campainhas, histórico e notificação push a cada toque,
 - **#7** Sair da conta no app para as notificações daquele celular.
 - **#8** Sem permissão de notificação, o app funciona e mostra um aviso com o atalho para conceder a permissão.
 - **#9** A campainha pode ser adicionada lendo o QR code de pareamento com a câmera do celular (SPEC-005 #2).
+- **#10** O app roda do Android 8.0 em diante.
 
 ## Critérios de aceite
 
@@ -42,11 +43,13 @@ App Android com login, campainhas, histórico e notificação push a cada toque,
 - **CA-5** Dada a permissão negada, então o histórico funciona e o aviso de permissão aparece. Cobre #8.
 - **CA-6** Dado o QR do adesivo, quando leio pelo app, então a campainha entra na lista. Cobre #9.
 - **CA-7** Dado o conteúdo enviado ao serviço de push, então ele não contém a foto nem endereço que dê acesso a ela sem sessão. Cobre #5.
+- **CA-8** Dado um emulador com Android 8.0, então login, histórico e notificação funcionam. Cobre #10.
 
 ## Contrato de API
 
 | Método e rota | Entrada | Sucesso | Erros |
 |---|---|---|---|
+| `POST /api/v1/auth/google/token` | `{ "idToken" }` (login Google feito no app) | 204, sessão iniciada | 401 token inválido ou emitido para outro app |
 | `POST /api/v1/push-tokens` | `{ "token", "platform": "android" }` | 204 | 400, 401 |
 | `DELETE /api/v1/push-tokens/{token}` | | 204 | 401 |
 
@@ -63,18 +66,14 @@ Telas: Entrar, Minhas campainhas (com "Adicionar campainha" por QR ou código), 
 ## Riscos e decisões
 
 - Serviço de push: Firebase Cloud Messaging, o único que entrega com o app fechado no Android. Vira ADR.
-- Tecnologia do app em aberto (abaixo); vira ADR.
+- App em Flutter: um código só, com plugins mantidos pelo Google para Firebase e login Google. Vira ADR junto com o do push. Nativo (Kotlin) descartado por ser mais código para as mesmas telas; Capacitor descartado por depender de plugins de terceiros para notificação e câmera.
+- Android 8.0 (API 26) como mínimo: é onde os canais de notificação passam a existir, cobre quase todos os aparelhos em uso e fica acima do mínimo exigido pelo Firebase.
+- O login Google no app usa o fluxo nativo do Android e entrega um token ao backend (rota nova acima), em vez do redirecionamento da web (SPEC-004).
 - Fabricantes que matam apps em segundo plano (Xiaomi, Samsung) podem atrasar o aviso; o CA-1 é verificado no celular da apresentação.
-
-## Em aberto antes da aprovação
-
-| Pergunta | Por que importa |
-|---|---|
-| App nativo (Kotlin e Jetpack Compose) ou casca do Angular atual (Capacitor) | Nativo dá mais controle de notificação; Capacitor reaproveita as telas já prontas e é mais rápido de entregar |
-| Versão mínima do Android | Define as APIs de permissão e de notificação disponíveis |
 
 ## Histórico
 
 | Data | Mudança |
 |---|---|
 | 2026-11-16 | Criação |
+| 2026-11-16 | Flutter, Android 8.0 como mínimo, rota de login Google por token |
