@@ -33,6 +33,8 @@ Campainha alimentada por bateria recarregável com painel solar, dormindo entre 
 - **#8** Sem notícia da campainha por mais de 13 h (dois relatos perdidos), ela aparece como "Sem comunicação".
 - **#9** Com a bateria abaixo do mínimo seguro da célula, a campainha não tenta usar WiFi e volta a dormir até o painel recarregar.
 - **#10** Autonomia mínima de 7 dias sem sol com 10 toques por dia.
+- **#11** A bateria não carrega fora da faixa de 0 °C a 45 °C, medida junto dela; fora da faixa, a campainha segue funcionando com a carga que tem.
+- **#12** A temperatura da bateria vai junto de cada relato, e acima de 45 °C a campainha aparece com o aviso "Bateria quente".
 
 ## Critérios de aceite
 
@@ -43,28 +45,29 @@ Campainha alimentada por bateria recarregável com painel solar, dormindo entre 
 - **CA-5** Dado o último contato há 14 h, então a tela mostra "Sem comunicação". Cobre #8.
 - **CA-6** Dada uma fonte de bancada abaixo do mínimo seguro no lugar da bateria, quando aperto o botão, então nenhuma conexão WiFi é tentada (log). Cobre #9.
 - **CA-7** Dado o consumo médio medido em sono e por toque, então a conta de autonomia com a capacidade da bateria dá pelo menos 7 dias. Cobre #10.
+- **CA-8** Dado o sensor de temperatura aquecido acima de 45 °C (soprador térmico, com a bateria afastada), então a corrente de carga cai a zero e a tela mostra "Bateria quente". Cobre #11, #12.
 
 ## Contrato de API
 
-`POST /api/v1/rings` (SPEC-001) ganha os campos opcionais `batteryMillivolts` (inteiro) e `charging` (booleano) no multipart; sem eles, o toque é aceito como antes.
+`POST /api/v1/rings` (SPEC-001) ganha os campos opcionais `batteryMillivolts` (inteiro), `charging` (booleano) e `batteryCelsius` (decimal) no multipart; sem eles, o toque é aceito como antes.
 
 ```
 POST /api/v1/devices/status
 X-Device-Key: <chave>
-{ "batteryMillivolts": 3910, "charging": false }
+{ "batteryMillivolts": 3310, "charging": false, "batteryCelsius": 31.5 }
 ```
 
-204. Erros: 400 valor fora de 2500 a 4500 mV, 401 chave inválida.
+204. Erros: 400 tensão fora de 2500 a 4500 mV ou temperatura fora de -40 a 125 °C, 401 chave inválida.
 
-`GET /api/v1/doorbells` (SPEC-005) ganha `batteryPercent`, `charging`, `lastSeenAt`, opcionais (nulos para campainha sem relato).
+`GET /api/v1/doorbells` (SPEC-005) ganha `batteryPercent`, `charging`, `batteryCelsius`, `lastSeenAt`, opcionais (nulos para campainha sem relato).
 
 ## Impacto em dados
 
-Colunas novas na campainha: última tensão, carregando, momento do último contato. Expand puro.
+Colunas novas na campainha: última tensão, carregando, última temperatura, momento do último contato. Expand puro.
 
 ## Interface
 
-Na lista de campainhas e no filtro do histórico: ícone de bateria com a porcentagem, ícone de raio quando carregando, e os estados "Bateria fraca" e "Sem comunicação".
+Na lista de campainhas e no filtro do histórico: ícone de bateria com a porcentagem, ícone de raio quando carregando, e os estados "Bateria fraca", "Bateria quente" e "Sem comunicação".
 
 ## Riscos e decisões
 
@@ -72,16 +75,12 @@ Na lista de campainhas e no filtro do histórico: ícone de bateria com a porcen
 - O momento do toque continua sendo a chegada no backend (SPEC-001 #5); com o sono, ele fica alguns segundos depois do aperto, o que é aceito.
 - A câmera OV2640 e o LED de energia da placa consomem em sono; pode ser preciso cortar a alimentação da câmera por um pino ou transistor. Medido no plano.
 - O botão precisa estar num pino capaz de acordar a placa (SPEC-007).
-
-## Em aberto antes da aprovação
-
-| Pergunta | Por que importa |
-|---|---|
-| Peças: bateria (tipo e mAh), painel (V e W) e módulo carregador | Definem o mínimo seguro do #9, a curva do #6 e se o #10 é alcançável |
-| A campainha fica exposta ao sol direto? | Dimensiona o painel e a proteção térmica da bateria no case |
+- Sol direto: dentro do case a temperatura passa de 60 °C. Bateria LiFePO4 em vez de Li-ion comum, por tolerar melhor o calor e não ter fuga térmica; carregador solar com sensor de temperatura (NTC) que corta a carga sozinho (#11), sem depender do firmware. Case claro, com a bateria do lado da sombra. Peças compradas a partir da lista do plano.
+- A curva de tensão para porcentagem (#6) e o mínimo seguro (#9) seguem a química escolhida.
 
 ## Histórico
 
 | Data | Mudança |
 |---|---|
 | 2026-11-16 | Criação |
+| 2026-11-16 | Sol direto: proteção térmica da carga (#11, #12), LiFePO4, peças compradas pela lista do plano |
