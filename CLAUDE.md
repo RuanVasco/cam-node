@@ -2,7 +2,7 @@
 
 Guia de desenvolvimento do cam-node, uma campainha inteligente: um ESP32-S3-CAM (OV2640) com botão físico tira uma foto quando alguém toca e envia para o backend, que avisa o frontend web em tempo real. Vale para qualquer código deste repositório.
 
-## MVP (prazo: 2026-11-23)
+## MVP (prazo: 2026-11-16; apresentação final: 2026-11-23)
 
 Apresentação feita de dentro do IF, numa rede que só libera saída HTTP/HTTPS. O dispositivo fala com o backend pela internet, pelo domínio público.
 
