@@ -4,6 +4,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { NEVER, of } from 'rxjs';
 
 import { RingApi } from '../ring-api';
+import { RingRemoval } from '../ring-removal';
 import { RingStream } from '../ring-stream';
 import { RingHistory } from './ring-history';
 
@@ -14,6 +15,7 @@ describe('RingHistory', () => {
       providers: [
         { provide: RingApi, useValue: { fetchPage: () => of({ rings: [], totalElements: 0 }) } },
         { provide: RingStream, useValue: { connect: () => NEVER } },
+        { provide: RingRemoval, useValue: { remove: () => of(false), busy: () => false } },
       ],
     });
     const sanitizer = TestBed.inject(DomSanitizer);

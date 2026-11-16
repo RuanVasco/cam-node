@@ -27,13 +27,13 @@ A SPEC-004 e a SPEC-005 ainda são rascunho, então valem o #7 e o #8 (senha de 
 ### 3. Frontend
 
 - `core/http/api-error.interceptor.ts`: `HttpContextToken` com a mensagem de erro da chamada (padrão a atual) e com os status que a própria chamada trata; 429 vira "Muitas tentativas. Tente de novo em alguns minutos."
-- `features/ring/ring-api.ts`: `remove(ids, adminKey)` com header `X-Admin-Key`; um id usa `DELETE`, mais de um usa `POST /removal`. O 401 fica com quem chamou.
+- `features/ring/ring-api.ts`: `remove(ids, adminKey)` com header `X-Admin-Key`; um id usa `DELETE`, mais de um usa `POST /removal`. O 401 vira `InvalidAdminKeyError` e fica com quem chamou. O 404 de um toque só conta como removido: outra tela chegou antes e esta só perdeu o evento.
 - `features/ring/ring-stream.ts`: evento `ring-removed` vira `{ kind: 'removed', id }`.
-- `features/ring/ring.service.ts`: `remove(ids, adminKey)` e o evento do stream tiram o toque da lista e descontam do total uma vez só, mesmo se os dois chegarem (#2, #4).
+- `features/ring/ring.service.ts`: `remove(ids, adminKey)` e o evento do stream tiram o toque da lista e descontam do total uma vez só, mesmo se os dois chegarem (#2, #4). Ids removidos ficam guardados para uma página antiga não trazer o toque de volta. Cada toque carregado que sai recua a próxima busca de "Carregar mais", senão o toque que muda de página no servidor nunca aparece. Ao reabrir o stream a lista recomeça da primeira página (mantendo os toques chegados ao vivo durante a busca), única forma de saber o que foi removido com o stream fora.
 - `features/ring/admin-key.store.ts`: senha em `sessionStorage`, que é por aba e some quando ela fecha (#7, CA-10). Leitura e escrita protegidas por `try/catch`.
-- `features/ring/ring-removal.ts`: fluxo confirmação (#5), senha (pede se não houver; no 401 apaga a guardada e pede de novo com "Senha incorreta."), remoção e aviso "Toque removido." ou "N toques removidos.".
+- `features/ring/ring-removal.ts`: fluxo confirmação (#5), senha (pede se não houver; no 401 apaga a guardada e pede de novo com "Senha incorreta."; guarda só depois de funcionar), remoção e aviso "Toque removido." ou "N toques removidos.". Um fluxo por vez: clique repetido enquanto um está aberto é ignorado.
 - Diálogos `ring-removal-confirm-dialog/` e `admin-key-dialog/` (formulário tipado). `@angular/forms` entra como dependência (pacote oficial do Angular).
-- `ring-history`: ação "Remover" em cada toque, modo de seleção com `mat-checkbox` e "Remover selecionados (N)", seleção limpa dos ids que sumiram. `ring-photo-dialog`: ação "Remover"; fecha sozinho quando o toque some da lista, por remoção local ou de outra tela.
+- `ring-history`: ação "Remover" em cada toque, modo de seleção com `mat-checkbox` e "Remover selecionados (N)", seleção limpa dos ids que sumiram e limitada a 100 (#6). Na seleção a caixa é o controle acessível; a miniatura só a atalha com o mouse. `ring-photo-dialog`: ação "Remover"; fecha sozinho quando o toque some da lista, por remoção local ou de outra tela.
 - Textos novos em `messages.ts`; ícones `delete` e `checklist` registrados.
 
 ### 4. Publicação
@@ -61,6 +61,9 @@ A SPEC-004 e a SPEC-005 ainda são rascunho, então valem o #7 e o #8 (senha de 
 | Confirmação cancelada não chama a API | unitário do fluxo | CA-5 |
 | Senha guardada reaproveitada; 401 pede de novo com "Senha incorreta." | unitário do fluxo | CA-10, #7 |
 | `ring-removed` vira evento de domínio | unitário do stream | #4 |
+| Remover toque carregado recua a próxima página; falha mantém o recuo; reconexão tira o que sumiu | unitário do serviço | #2, #4 |
+| Diálogo de senha devolve a senha digitada e não envia vazia | unitário do componente | #7 |
+| Segundo pedido com um fluxo aberto é ignorado | unitário do fluxo | #5 |
 | 429 mostra a mensagem de bloqueio; status tratado pela chamada não mostra aviso | unitário do interceptor | #8 |
 
 CA-4 entre duas telas e CA-10 numa aba nova são conferidos à mão no navegador depois do deploy.

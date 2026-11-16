@@ -14,6 +14,11 @@ export const EVENT_SOURCE_FACTORY = new InjectionToken<(url: string) => EventSou
 
 export const STREAM_RETRY_MS = 5000;
 
+/** Wire format of the SPEC-010 ring-removed event. */
+interface RingRemovedDto {
+  readonly id: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RingStream {
   private readonly createEventSource = inject(EVENT_SOURCE_FACTORY);
@@ -40,6 +45,10 @@ export class RingStream {
         source.addEventListener('ring', (event: MessageEvent<string>) => {
           const dto: RingDto = JSON.parse(event.data);
           subscriber.next({ kind: 'ring', ring: toRing(dto) });
+        });
+        source.addEventListener('ring-removed', (event: MessageEvent<string>) => {
+          const dto: RingRemovedDto = JSON.parse(event.data);
+          subscriber.next({ kind: 'removed', id: dto.id });
         });
       };
 

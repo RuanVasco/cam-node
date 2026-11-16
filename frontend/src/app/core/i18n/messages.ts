@@ -16,8 +16,32 @@ export const MESSAGES = {
   photoDialog: {
     close: 'Fechar',
   },
+  removal: {
+    remove: 'Remover',
+    removeRing: (time: string) => `Remover toque das ${time}`,
+    select: 'Selecionar',
+    cancelSelection: 'Cancelar seleção',
+    selectRing: (time: string) => `Selecionar toque das ${time}`,
+    removeSelected: (count: number) => `Remover selecionados (${count})`,
+    confirmOne: 'Remover este toque? A foto será apagada definitivamente.',
+    confirmMany: (count: number) =>
+      `Remover ${count} toques? As fotos serão apagadas definitivamente.`,
+    cancel: 'Cancelar',
+    confirm: 'Remover',
+    removedOne: 'Toque removido.',
+    removedMany: (count: number) => `${count} toques removidos.`,
+  },
+  adminKey: {
+    title: 'Senha de administrador',
+    label: 'Senha',
+    cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    wrong: 'Senha incorreta.',
+  },
   errors: {
     generic: 'Não foi possível carregar os dados. Tente novamente.',
+    removalFailed: 'Não foi possível remover. Tente novamente.',
+    tooManyAttempts: 'Muitas tentativas. Tente de novo em alguns minutos.',
     dismiss: 'OK',
   },
 };

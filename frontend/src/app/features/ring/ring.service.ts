@@ -1,6 +1,7 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 
-import { RingApi } from './ring-api';
+import { PAGE_SIZE, RingApi } from './ring-api';
 import { RingStream } from './ring-stream';
 import { ConnectionStatus, Ring, RingPage } from './ring.model';
 
@@ -12,6 +13,9 @@ export const HIGHLIGHT_MS = 10_000;
  *
  * Rings are kept unique by id and newest first. A live ring shifts the server pages by one, so the next page may
  * repeat rings already shown; deduplication absorbs that without leaving gaps.
+ *
+ * A removal reaches this client twice, as the answer to its own request and as a stream event, in either order.
+ * Removed ids are remembered so the total drops once and a page fetched before the removal does not bring it back.
  */
 @Injectable({ providedIn: 'root' })
 export class RingService {
@@ -25,7 +29,11 @@ export class RingService {
   private readonly status = signal<ConnectionStatus>('connecting');
   private readonly firstPageLoaded = signal(false);
   private readonly fetchingMore = signal(false);
+  private readonly removedIds = new Set<string>();
   private nextPage = 0;
+  // Loaded rings removed since the last page fetch; each one moves later rings one place back on the server.
+  private removedSinceFetch = 0;
+  private readonly liveDuringFetch = new Set<string>();
   private started = false;
   private droppedSinceOpen = false;
 
@@ -59,6 +67,9 @@ export class RingService {
         case 'ring':
           this.addLive(event.ring);
           break;
+        case 'removed':
+          this.drop([event.id]);
+          break;
       }
     });
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
@@ -69,21 +80,43 @@ export class RingService {
       return;
     }
     this.fetchingMore.set(true);
-    this.api.fetchPage(this.nextPage).subscribe({
-      next: (page) => {
-        this.nextPage++;
-        this.merge(page);
+    // Rule: SPEC-010 #2. Fetching from as many pages back as removals shifted keeps a ring from falling between pages.
+    const shift = this.removedSinceFetch;
+    const page = Math.max(0, this.nextPage - Math.ceil(shift / PAGE_SIZE));
+    this.removedSinceFetch = 0;
+    this.api.fetchPage(page).subscribe({
+      next: (result) => {
+        this.nextPage = page + 1;
+        this.merge(result);
       },
       complete: () => this.fetchingMore.set(false),
-      error: () => this.fetchingMore.set(false),
+      error: () => {
+        this.removedSinceFetch += shift;
+        this.fetchingMore.set(false);
+      },
     });
   }
 
+  // Rule: SPEC-010 #2.
+  remove(ids: readonly string[], adminKey: string): Observable<void> {
+    return this.api.remove(ids, adminKey).pipe(tap(() => this.drop(ids)));
+  }
+
+  /**
+   * Starts the list over from the first page. After a stream drop this is the only way to learn about rings removed
+   * meanwhile (SPEC-010 #4), and it also resets the paging, which removals may have shifted. Rings pushed live
+   * while the page was in flight are kept, since the server may have answered before they existed.
+   */
   private loadFirstPage(): void {
+    this.liveDuringFetch.clear();
     this.api.fetchPage(0).subscribe({
       next: (page) => {
-        this.nextPage = Math.max(this.nextPage, 1);
-        this.merge(page);
+        const kept = page.rings.filter((ring) => !this.removedIds.has(ring.id));
+        const newer = this.ringList().filter((ring) => this.liveDuringFetch.has(ring.id));
+        this.nextPage = 1;
+        this.removedSinceFetch = 0;
+        this.total.set(page.totalElements);
+        this.ringList.set(mergeNewestFirst(newer, kept));
         this.firstPageLoaded.set(true);
       },
       // The interceptor already told the user; the next stream open retries the page.
@@ -93,13 +126,33 @@ export class RingService {
 
   private merge(page: RingPage): void {
     this.total.set(page.totalElements);
-    this.ringList.update((current) => mergeNewestFirst(current, page.rings));
+    const kept = page.rings.filter((ring) => !this.removedIds.has(ring.id));
+    this.ringList.update((current) => mergeNewestFirst(current, kept));
+  }
+
+  // Rule: SPEC-010 #4.
+  private drop(ids: readonly string[]): void {
+    const fresh = ids.filter((id) => !this.removedIds.has(id));
+    if (fresh.length === 0) {
+      return;
+    }
+    fresh.forEach((id) => this.removedIds.add(id));
+    const gone = new Set(fresh);
+    const before = this.ringList();
+    const after = before.filter((ring) => !gone.has(ring.id));
+    this.removedSinceFetch += before.length - after.length;
+    this.ringList.set(after);
+    this.total.update((total) => Math.max(0, total - fresh.length));
   }
 
   private addLive(ring: Ring): void {
-    if (this.ringList().some((existing) => existing.id === ring.id)) {
+    if (
+      this.removedIds.has(ring.id) ||
+      this.ringList().some((existing) => existing.id === ring.id)
+    ) {
       return;
     }
+    this.liveDuringFetch.add(ring.id);
     this.ringList.update((current) => mergeNewestFirst(current, [ring]));
     this.total.update((total) => total + 1);
     this.highlightedIds.update((ids) => new Set(ids).add(ring.id));

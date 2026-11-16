@@ -8,17 +8,41 @@
     <p>{{ messages.history.empty }}</p>
   </div>
 } @else {
+  <div class="actions">
+    @if (selecting()) {
+      <button mat-button type="button" (click)="toggleSelecting()">
+        {{ messages.removal.cancelSelection }}
+      </button>
+      <button
+        mat-flat-button
+        type="button"
+        (click)="removeSelected()"
+        [disabled]="cannotRemoveSelected()"
+      >
+        <mat-icon svgIcon="delete" aria-hidden="true" />
+        {{ removeSelectedLabel() }}
+      </button>
+    } @else {
+      <button mat-button type="button" (click)="toggleSelecting()">
+        <mat-icon svgIcon="checklist" aria-hidden="true" />
+        {{ messages.removal.select }}
+      </button>
+    }
+  </div>
   @for (day of days(); track day.key) {
     <section>
       <h2>{{ day.label }}</h2>
       <ul>
         @for (item of day.items; track item.ring.id) {
-          <li [class.highlighted]="item.highlighted">
+          <li [class.highlighted]="item.highlighted" [class.selected]="item.selected">
             <button
               type="button"
               class="thumb"
-              (click)="openPhoto(item.ring)"
+              [class.zoom]="!selecting()"
+              (click)="thumbClicked(item.ring)"
               [attr.aria-label]="item.openLabel"
+              [attr.aria-hidden]="item.thumbHidden"
+              [tabIndex]="item.thumbTabIndex"
             >
               <img
                 [src]="item.ring.photoUrl"
@@ -28,7 +52,26 @@
                 height="120"
               />
             </button>
-            <time [attr.datetime]="item.isoTime">{{ item.time }}</time>
+            <div class="footer">
+              <time [attr.datetime]="item.isoTime">{{ item.time }}</time>
+              @if (selecting()) {
+                <mat-checkbox
+                  [checked]="item.selected"
+                  (change)="toggleSelected(item.ring)"
+                  [aria-label]="item.selectLabel"
+                  [disabled]="item.selectDisabled"
+                />
+              } @else {
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="removeOne(item.ring)"
+                  [attr.aria-label]="item.removeLabel"
+                >
+                  <mat-icon svgIcon="delete" aria-hidden="true" />
+                </button>
+              }
+            </div>
           </li>
         }
       </ul>

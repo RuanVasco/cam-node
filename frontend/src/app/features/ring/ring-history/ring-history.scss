@@ -19,6 +19,13 @@
   }
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 h2 {
   margin: 24px 0 12px;
   font: var(--mat-sys-title-medium);
@@ -49,6 +56,10 @@ li {
     background: var(--mat-sys-primary-container);
     box-shadow: 0 0 0 2px var(--mat-sys-primary);
   }
+
+  &.selected {
+    box-shadow: 0 0 0 2px var(--mat-sys-primary);
+  }
 }
 
 .thumb {
@@ -56,8 +67,12 @@ li {
   border: 0;
   border-radius: 8px;
   overflow: hidden;
-  cursor: zoom-in;
+  cursor: pointer;
   background: none;
+
+  &.zoom {
+    cursor: zoom-in;
+  }
 
   &:focus-visible {
     outline: 2px solid var(--mat-sys-primary);
@@ -71,6 +86,13 @@ img {
   height: auto;
   aspect-ratio: 4 / 3;
   object-fit: cover;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
 }
 
 time {

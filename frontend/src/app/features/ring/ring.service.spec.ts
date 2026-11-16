@@ -12,7 +12,13 @@ function ringAt(id: string, iso: string): Ring {
 
 class FakeRingApi {
   readonly requestedPages: number[] = [];
+  readonly removals: { ids: readonly string[]; adminKey: string }[] = [];
   pages: RingPage[] = [];
+
+  remove(ids: readonly string[], adminKey: string): Observable<void> {
+    this.removals.push({ ids, adminKey });
+    return of(undefined);
+  }
 
   fetchPage(page: number): Observable<RingPage> {
     this.requestedPages.push(page);
@@ -126,6 +132,120 @@ describe('RingService', () => {
     expect(api.requestedPages).toEqual([0, 1]);
     expect(service.rings().map((ring) => ring.id)).toEqual(['b', 'a']);
     expect(service.hasMore()).toBe(false);
+  });
+
+  it('SPEC-010 #2: a removal drops the rings and lowers the total', () => {
+    api.pages = [
+      {
+        rings: [ringAt('b', '2026-11-23T10:00:00Z'), ringAt('a', '2026-11-23T09:00:00Z')],
+        totalElements: 3,
+      },
+    ];
+    service.start();
+
+    service.remove(['b'], 'key').subscribe();
+
+    expect(api.removals).toEqual([{ ids: ['b'], adminKey: 'key' }]);
+    expect(service.rings().map((ring) => ring.id)).toEqual(['a']);
+    expect(service.hasMore()).toBe(true);
+  });
+
+  it('SPEC-010 #4: the own removal and its stream event lower the total once, in either order', () => {
+    api.pages = [
+      {
+        rings: [ringAt('b', '2026-11-23T10:00:00Z'), ringAt('a', '2026-11-23T09:00:00Z')],
+        totalElements: 2,
+      },
+    ];
+    service.start();
+
+    stream.events.next({ kind: 'removed', id: 'b' });
+    service.remove(['b'], 'key').subscribe();
+
+    expect(service.rings().map((ring) => ring.id)).toEqual(['a']);
+    expect(service.hasMore()).toBe(false);
+  });
+
+  it('SPEC-010 #4: a ring removed on another screen leaves the list', () => {
+    api.pages = [{ rings: [ringAt('a', '2026-11-23T09:00:00Z')], totalElements: 1 }];
+    service.start();
+
+    stream.events.next({ kind: 'removed', id: 'a' });
+
+    expect(service.rings()).toEqual([]);
+  });
+
+  it('SPEC-010 #2: a page fetched before the removal does not bring the ring back', () => {
+    api.pages = [
+      { rings: [ringAt('a', '2026-11-23T09:00:00Z')], totalElements: 1 },
+      { rings: [ringAt('a', '2026-11-23T09:00:00Z')], totalElements: 1 },
+    ];
+    service.start();
+    stream.events.next({ kind: 'removed', id: 'a' });
+
+    stream.events.next({ kind: 'error' });
+    stream.events.next({ kind: 'open' });
+
+    expect(service.rings()).toEqual([]);
+  });
+
+  it('SPEC-010 #2: after removing a loaded ring, load more fetches from one page back', () => {
+    api.pages = [
+      {
+        rings: Array.from({ length: 20 }, (_, i) =>
+          ringAt('r' + i, new Date(Date.UTC(2026, 10, 23, 12, 0, 59 - i)).toISOString()),
+        ),
+        totalElements: 25,
+      },
+    ];
+    service.start();
+
+    service.remove(['r0'], 'key').subscribe();
+    service.loadMore();
+    service.loadMore();
+
+    expect(api.requestedPages).toEqual([0, 0, 1]);
+  });
+
+  it('SPEC-010 #4: a ring removed elsewhere while the stream was down leaves the list on reconnect', () => {
+    api.pages = [
+      {
+        rings: [ringAt('b', '2026-11-23T10:00:00Z'), ringAt('a', '2026-11-23T09:00:00Z')],
+        totalElements: 2,
+      },
+      { rings: [ringAt('a', '2026-11-23T09:00:00Z')], totalElements: 1 },
+    ];
+    service.start();
+    stream.events.next({ kind: 'open' });
+
+    stream.events.next({ kind: 'error' });
+    stream.events.next({ kind: 'open' });
+
+    expect(service.rings().map((ring) => ring.id)).toEqual(['a']);
+  });
+
+  it('SPEC-010 #2: a failed load more keeps the shift from earlier removals', () => {
+    api.pages = [
+      {
+        rings: Array.from({ length: 20 }, (_, i) =>
+          ringAt('r' + i, new Date(Date.UTC(2026, 10, 23, 12, 0, 59 - i)).toISOString()),
+        ),
+        totalElements: 25,
+      },
+    ];
+    service.start();
+    service.remove(['r0'], 'key').subscribe();
+    const fetchPage = api.fetchPage.bind(api);
+    api.fetchPage = (page: number) => {
+      api.requestedPages.push(page);
+      return throwError(() => new Error('offline'));
+    };
+    service.loadMore();
+    api.fetchPage = fetchPage;
+
+    service.loadMore();
+
+    expect(api.requestedPages).toEqual([0, 0, 0]);
   });
 
   it('SPEC-002 #4: the same ring arriving twice is shown once', () => {

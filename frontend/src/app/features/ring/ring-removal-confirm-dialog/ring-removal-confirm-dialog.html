@@ -1,0 +1,9 @@
+<mat-dialog-content>
+  <p>{{ question }}</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" [mat-dialog-close]="false">{{ messages.removal.cancel }}</button>
+  <button mat-flat-button type="button" [mat-dialog-close]="true">
+    {{ messages.removal.confirm }}
+  </button>
+</mat-dialog-actions>

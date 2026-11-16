@@ -1,11 +1,14 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, catchError, map, of, throwError } from 'rxjs';
 
-import { Ring, RingPage } from './ring.model';
+import { API_ERROR_MESSAGE, CALLER_HANDLED_STATUSES } from '../../core/http/api-error.interceptor';
+import { MESSAGES } from '../../core/i18n/messages';
+import { InvalidAdminKeyError, Ring, RingPage } from './ring.model';
 
 export const RINGS_URL = '/api/v1/rings';
 export const PAGE_SIZE = 20;
+export const ADMIN_KEY_HEADER = 'X-Admin-Key';
 
 /** Wire format of SPEC-002; dates arrive as ISO-8601 strings. */
 export interface RingDto {
@@ -33,5 +36,41 @@ export class RingApi {
     return this.http
       .get<RingPageDto>(RINGS_URL, { params: { page, size: PAGE_SIZE } })
       .pipe(map((dto) => ({ rings: dto.content.map(toRing), totalElements: dto.totalElements })));
+  }
+
+  /**
+   * Rule: SPEC-010 #6, #7. Fails with InvalidAdminKeyError on a 401, which the caller handles. A single ring that
+   * is already gone (404) counts as removed: another screen got there first, and this one only missed the event.
+   */
+  remove(ids: readonly string[], adminKey: string): Observable<void> {
+    const single = ids.length === 1;
+    const handled = single
+      ? [HttpStatusCode.Unauthorized, HttpStatusCode.NotFound]
+      : [HttpStatusCode.Unauthorized];
+    const options = {
+      headers: { [ADMIN_KEY_HEADER]: adminKey },
+      context: new HttpContext()
+        .set(API_ERROR_MESSAGE, MESSAGES.errors.removalFailed)
+        .set(CALLER_HANDLED_STATUSES, handled),
+    };
+    const request = single
+      ? this.http.delete<void>(`${RINGS_URL}/${ids[0]}`, options)
+      : this.http.post<void>(`${RINGS_URL}/removal`, { ids }, options);
+    return request.pipe(
+      map(() => undefined),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === HttpStatusCode.Unauthorized) {
+          return throwError(() => new InvalidAdminKeyError());
+        }
+        if (
+          single &&
+          error instanceof HttpErrorResponse &&
+          error.status === HttpStatusCode.NotFound
+        ) {
+          return of(undefined);
+        }
+        return throwError(() => error);
+      }),
+    );
   }
 }

@@ -1,8 +1,18 @@
 <div class="header">
   <span class="caption">{{ caption }}</span>
-  <button mat-icon-button mat-dialog-close [attr.aria-label]="messages.photoDialog.close">
-    <mat-icon svgIcon="close" />
-  </button>
+  <span class="tools">
+    <button
+      mat-icon-button
+      type="button"
+      (click)="remove()"
+      [attr.aria-label]="messages.removal.remove"
+    >
+      <mat-icon svgIcon="delete" aria-hidden="true" />
+    </button>
+    <button mat-icon-button mat-dialog-close [attr.aria-label]="messages.photoDialog.close">
+      <mat-icon svgIcon="close" />
+    </button>
+  </span>
 </div>
 <mat-dialog-content>
   <img [src]="ring.photoUrl" [alt]="messages.history.photoAlt" />

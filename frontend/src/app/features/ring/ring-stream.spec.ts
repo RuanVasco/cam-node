@@ -74,6 +74,15 @@ describe('RingStream', () => {
     ]);
   });
 
+  it('SPEC-010 #4: turns a ring-removed event into a domain event', () => {
+    const events: RingStreamEvent[] = [];
+    stream.connect().subscribe((event) => events.push(event));
+
+    sources[0].emit('ring-removed', '{"id":"r1"}');
+
+    expect(events).toEqual([{ kind: 'removed', id: 'r1' }]);
+  });
+
   it('SPEC-002 #9: opens a new connection when the browser gives up reconnecting', () => {
     const events: RingStreamEvent[] = [];
     stream.connect().subscribe((event) => events.push(event));

@@ -20,4 +20,13 @@ export type ConnectionStatus = 'connecting' | 'live' | 'reconnecting';
 export type RingStreamEvent =
   | { readonly kind: 'open' }
   | { readonly kind: 'error' }
-  | { readonly kind: 'ring'; readonly ring: Ring };
+  | { readonly kind: 'ring'; readonly ring: Ring }
+  | { readonly kind: 'removed'; readonly id: string };
+
+/** The admin key was missing or wrong (SPEC-010 #7). */
+export class InvalidAdminKeyError extends Error {
+  constructor() {
+    super('Invalid admin key');
+    this.name = 'InvalidAdminKeyError';
+  }
+}
