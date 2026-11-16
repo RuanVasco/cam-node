@@ -58,22 +58,15 @@ Sem tela. Log serial em 115200 baud, uma linha por evento (conexão, toque, tent
 
 ## Riscos e decisões
 
-- Rede do IF: se exigir portal de login ou WPA2-Enterprise, o WiFi com credencial fixa não conecta. Confirmar o tipo de rede antes da apresentação; plano B é um roteador ou hotspot de celular levado junto.
+- Placa: GOOUUU ESP32-S3-CAM V1.5 (ESP32-S3 com PSRAM, OV2640). O pinout da câmera é o mesmo do ESP32-S3-EYE do exemplo `CameraWebServer`; conferir com a placa na primeira gravação.
+- Botão: até o botão do IF estar em mãos, o toque vem do botão BOOT da própria placa (GPIO0, já com pull-up). O pino é definido na compilação, então trocar pelo botão externo (ligado entre um GPIO livre e o GND) não muda o código. Disparo por timer foi descartado: gera toques que ninguém fez e não exercita o debounce (#3).
+- Rede do IF: "IFRS Alunos" usa WPA3-Personal (SSID e senha, sem portal nem Enterprise), suportado pelo ESP32-S3. O ESP32 só opera em 2,4 GHz; se a rede não oferecer essa faixa, não conecta. Plano B: hotspot de celular em 2,4 GHz.
 - Bot Fight Mode da Cloudflare pode desafiar um cliente que não é navegador; conferir com a placa real antes da apresentação.
 - O relógio do dispositivo não é usado para o momento do toque (SPEC-001 #5), mas a validação do certificado precisa da data certa: o firmware sincroniza a hora por NTP ao conectar.
-
-## Em aberto antes da aprovação
-
-| Pergunta | Por que importa |
-|---|---|
-| Modelo exato da placa (o que está impresso nela ou o link da compra) | O pinout da câmera muda entre as placas ESP32-S3-CAM e define o GPIO livre para o botão |
-| O botão já está ligado em algum pino? | Se não, o plano indica o GPIO; a ligação é entre o GPIO e o GND, sem resistor (pull-up interno) |
-| Tipo da rede WiFi do IF: senha simples (WPA2-Personal), portal de login ou WPA2-Enterprise | Com portal ou Enterprise a credencial fixa não conecta e vale o plano B (roteador ou hotspot) |
-
-Respondidas as perguntas e aprovada a spec, o próximo passo é o plano em `003-firmware-da-campainha.plano.md` e a implementação em `doorbell/` (PlatformIO, Arduino-ESP32 3.x), seguindo o fluxo do `CLAUDE.md`.
 
 ## Histórico
 
 | Data | Mudança |
 |---|---|
 | 2026-11-16 | Criação |
+| 2026-11-16 | Placa, botão provisório (BOOT) e tipo da rede do IF definidos |
