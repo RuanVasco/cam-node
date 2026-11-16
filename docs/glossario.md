@@ -19,3 +19,16 @@ Ao criar termo novo, acrescentar aqui antes de usar no código.
 | Assinante | `subscriber` | Cliente conectado ao stream de toques. |
 | Sinal de vida | `heartbeat` | Comentário enviado periodicamente no stream para a conexão não ser encerrada por inatividade. |
 | Simulador | `simulator` | Programa em C (`tools/simulator/`) que faz o papel do dispositivo sem hardware. |
+| Usuário | `User` | Pessoa com conta, que entra com Google ou com e-mail e senha (SPEC-004). |
+| Sessão | `session` | Login ativo de um usuário num navegador ou no app. |
+| Membro | `DoorbellMember` | Vínculo entre um usuário e uma campainha; dá acesso aos toques dela (SPEC-005). |
+| Código de pareamento | `pairingCode` | Código impresso no adesivo da campainha que torna o usuário membro dela. |
+| Modo de configuração | `setupMode` | Estado da campainha em que ela cria a rede própria para receber o WiFi da casa (SPEC-006). |
+| Rede própria | `setupAccessPoint` | Rede `CamNode-XXXX` criada pela campainha no modo de configuração. |
+| Aviso de dentro | `chime` | Parte interna da campainha existente, que toca dentro de casa (SPEC-007). |
+| Sono profundo | `deepSleep` | Estado de economia de energia da campainha entre toques (SPEC-008). |
+| Relato de estado | `statusReport` | Envio periódico da tensão da bateria, sem toque (SPEC-008). |
+| Nível da bateria | `batteryPercent` | Carga da bateria em porcentagem, calculada no backend a partir da tensão. |
+| Notificação push | `pushNotification` | Aviso de toque entregue no celular mesmo com o app fechado (SPEC-009). |
+| Token de push | `pushToken` | Identificador de um celular no serviço de push, registrado pelo app. |
+| Remoção de toque | `ringRemoval` | Exclusão definitiva de um toque e da sua foto (SPEC-010). |
