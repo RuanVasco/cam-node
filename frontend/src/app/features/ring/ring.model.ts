@@ -21,12 +21,5 @@ export type RingStreamEvent =
   | { readonly kind: 'open' }
   | { readonly kind: 'error' }
   | { readonly kind: 'ring'; readonly ring: Ring }
-  | { readonly kind: 'removed'; readonly id: string };
-
-/** The admin key was missing or wrong (SPEC-010 #7). */
-export class InvalidAdminKeyError extends Error {
-  constructor() {
-    super('Invalid admin key');
-    this.name = 'InvalidAdminKeyError';
-  }
-}
+  | { readonly kind: 'removed'; readonly id: string }
+  | { readonly kind: 'restored'; readonly ring: Ring };

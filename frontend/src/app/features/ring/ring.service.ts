@@ -70,6 +70,9 @@ export class RingService {
         case 'removed':
           this.drop([event.id]);
           break;
+        case 'restored':
+          this.restore(event.ring);
+          break;
       }
     });
     this.destroyRef.onDestroy(() => subscription.unsubscribe());
@@ -97,9 +100,9 @@ export class RingService {
     });
   }
 
-  // Rule: SPEC-010 #2.
-  remove(ids: readonly string[], adminKey: string): Observable<void> {
-    return this.api.remove(ids, adminKey).pipe(tap(() => this.drop(ids)));
+  // Rule: SPEC-010 #9.
+  remove(ids: readonly string[]): Observable<void> {
+    return this.api.remove(ids).pipe(tap(() => this.drop(ids)));
   }
 
   /**
@@ -143,6 +146,25 @@ export class RingService {
     this.removedSinceFetch += before.length - after.length;
     this.ringList.set(after);
     this.total.update((total) => Math.max(0, total - fresh.length));
+  }
+
+  /**
+   * Rule: SPEC-010 #11. Goes back to the place of its ring time, not to the top, and is not highlighted: it is not a
+   * new ring. Its id leaves the removed set so later pages show it again. A ring older than everything loaded,
+   * with more pages to fetch, is left for "Carregar mais", which reaches it in order.
+   */
+  private restore(ring: Ring): void {
+    this.removedIds.delete(ring.id);
+    const current = this.ringList();
+    if (current.some((existing) => existing.id === ring.id)) {
+      return;
+    }
+    const oldest = current.at(-1);
+    const beyondLoaded = this.hasMore() && oldest !== undefined && ring.ringedAt < oldest.ringedAt;
+    this.total.update((total) => total + 1);
+    if (!beyondLoaded) {
+      this.ringList.set(mergeNewestFirst(current, [ring]));
+    }
   }
 
   private addLive(ring: Ring): void {

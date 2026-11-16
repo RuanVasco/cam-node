@@ -12,11 +12,11 @@ function ringAt(id: string, iso: string): Ring {
 
 class FakeRingApi {
   readonly requestedPages: number[] = [];
-  readonly removals: { ids: readonly string[]; adminKey: string }[] = [];
+  readonly removals: (readonly string[])[] = [];
   pages: RingPage[] = [];
 
-  remove(ids: readonly string[], adminKey: string): Observable<void> {
-    this.removals.push({ ids, adminKey });
+  remove(ids: readonly string[]): Observable<void> {
+    this.removals.push(ids);
     return of(undefined);
   }
 
@@ -134,7 +134,7 @@ describe('RingService', () => {
     expect(service.hasMore()).toBe(false);
   });
 
-  it('SPEC-010 #2: a removal drops the rings and lowers the total', () => {
+  it('SPEC-010 #9: a removal drops the rings and lowers the total', () => {
     api.pages = [
       {
         rings: [ringAt('b', '2026-11-23T10:00:00Z'), ringAt('a', '2026-11-23T09:00:00Z')],
@@ -143,9 +143,9 @@ describe('RingService', () => {
     ];
     service.start();
 
-    service.remove(['b'], 'key').subscribe();
+    service.remove(['b']).subscribe();
 
-    expect(api.removals).toEqual([{ ids: ['b'], adminKey: 'key' }]);
+    expect(api.removals).toEqual([['b']]);
     expect(service.rings().map((ring) => ring.id)).toEqual(['a']);
     expect(service.hasMore()).toBe(true);
   });
@@ -160,7 +160,7 @@ describe('RingService', () => {
     service.start();
 
     stream.events.next({ kind: 'removed', id: 'b' });
-    service.remove(['b'], 'key').subscribe();
+    service.remove(['b']).subscribe();
 
     expect(service.rings().map((ring) => ring.id)).toEqual(['a']);
     expect(service.hasMore()).toBe(false);
@@ -200,7 +200,7 @@ describe('RingService', () => {
     ];
     service.start();
 
-    service.remove(['r0'], 'key').subscribe();
+    service.remove(['r0']).subscribe();
     service.loadMore();
     service.loadMore();
 
@@ -234,7 +234,7 @@ describe('RingService', () => {
       },
     ];
     service.start();
-    service.remove(['r0'], 'key').subscribe();
+    service.remove(['r0']).subscribe();
     const fetchPage = api.fetchPage.bind(api);
     api.fetchPage = (page: number) => {
       api.requestedPages.push(page);
@@ -246,6 +246,52 @@ describe('RingService', () => {
     service.loadMore();
 
     expect(api.requestedPages).toEqual([0, 0, 0]);
+  });
+
+  it('SPEC-010 CA-4 (#11): a restored ring goes back to the place of its time, not highlighted', () => {
+    api.pages = [
+      {
+        rings: [ringAt('c', '2026-11-23T11:00:00Z'), ringAt('a', '2026-11-23T09:00:00Z')],
+        totalElements: 2,
+      },
+    ];
+    service.start();
+
+    stream.events.next({ kind: 'restored', ring: ringAt('b', '2026-11-23T10:00:00Z') });
+
+    expect(service.rings().map((ring) => ring.id)).toEqual(['c', 'b', 'a']);
+    expect(service.highlighted().size).toBe(0);
+    expect(service.hasMore()).toBe(false);
+  });
+
+  it('SPEC-010 #11: a ring removed here and then restored elsewhere comes back once', () => {
+    api.pages = [{ rings: [ringAt('a', '2026-11-23T09:00:00Z')], totalElements: 1 }];
+    service.start();
+    service.remove(['a']).subscribe();
+
+    stream.events.next({ kind: 'restored', ring: ringAt('a', '2026-11-23T09:00:00Z') });
+    stream.events.next({ kind: 'restored', ring: ringAt('a', '2026-11-23T09:00:00Z') });
+
+    expect(service.rings().map((ring) => ring.id)).toEqual(['a']);
+    expect(service.hasMore()).toBe(false);
+  });
+
+  it('SPEC-010 #11: a restored ring older than the loaded pages waits for load more', () => {
+    api.pages = [
+      { rings: [ringAt('b', '2026-11-23T10:00:00Z')], totalElements: 2 },
+      {
+        rings: [ringAt('a', '2026-11-23T09:00:00Z'), ringAt('old', '2026-11-20T09:00:00Z')],
+        totalElements: 3,
+      },
+    ];
+    service.start();
+
+    stream.events.next({ kind: 'restored', ring: ringAt('old', '2026-11-20T09:00:00Z') });
+    expect(service.rings().map((ring) => ring.id)).toEqual(['b']);
+
+    service.loadMore();
+    expect(service.rings().map((ring) => ring.id)).toEqual(['b', 'a', 'old']);
+    expect(service.hasMore()).toBe(false);
   });
 
   it('SPEC-002 #4: the same ring arriving twice is shown once', () => {

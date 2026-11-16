@@ -1,0 +1,65 @@
+:host {
+  display: block;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.actions {
+  display: flex;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 0;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  mat-icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container);
+}
+
+.when {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+
+  &.removed {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}

@@ -83,6 +83,27 @@ describe('RingStream', () => {
     expect(events).toEqual([{ kind: 'removed', id: 'r1' }]);
   });
 
+  it('SPEC-010 #11: turns a ring-restored event into a domain event', () => {
+    const events: RingStreamEvent[] = [];
+    stream.connect().subscribe((event) => events.push(event));
+
+    sources[0].emit(
+      'ring-restored',
+      '{"id":"r1","ringedAt":"2026-11-23T19:42:10.123Z","photoUrl":"/api/v1/rings/r1/photo"}',
+    );
+
+    expect(events).toEqual([
+      {
+        kind: 'restored',
+        ring: {
+          id: 'r1',
+          ringedAt: new Date('2026-11-23T19:42:10.123Z'),
+          photoUrl: '/api/v1/rings/r1/photo',
+        },
+      },
+    ]);
+  });
+
   it('SPEC-002 #9: opens a new connection when the browser gives up reconnecting', () => {
     const events: RingStreamEvent[] = [];
     stream.connect().subscribe((event) => events.push(event));

@@ -1,0 +1,5 @@
+@if (src(); as url) {
+  <img [src]="url" [alt]="alt()" width="320" height="240" />
+} @else {
+  <div class="placeholder" role="img" [attr.aria-label]="alt()"></div>
+}

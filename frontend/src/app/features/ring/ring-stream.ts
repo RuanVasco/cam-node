@@ -50,6 +50,11 @@ export class RingStream {
           const dto: RingRemovedDto = JSON.parse(event.data);
           subscriber.next({ kind: 'removed', id: dto.id });
         });
+        // Rule: SPEC-010 #11.
+        source.addEventListener('ring-restored', (event: MessageEvent<string>) => {
+          const dto: RingDto = JSON.parse(event.data);
+          subscriber.next({ kind: 'restored', ring: toRing(dto) });
+        });
       };
 
       open();

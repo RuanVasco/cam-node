@@ -1,0 +1,72 @@
+<div class="actions">
+  <a mat-button routerLink="/">
+    <mat-icon svgIcon="arrow-back" aria-hidden="true" />
+    {{ messages.trash.back }}
+  </a>
+</div>
+@switch (state()) {
+  @case ('loading') {
+    <div class="state">
+      <mat-progress-spinner mode="indeterminate" diameter="40" />
+    </div>
+  }
+  @case ('locked') {
+    <div class="state">
+      <mat-icon svgIcon="lock" aria-hidden="true" />
+      <p>{{ messages.trash.locked }}</p>
+      <button mat-flat-button type="button" (click)="retry()">{{ messages.trash.unlock }}</button>
+    </div>
+  }
+  @case ('failed') {
+    <div class="state">
+      <p>{{ messages.errors.generic }}</p>
+      <button mat-flat-button type="button" (click)="retry()">{{ messages.trash.retry }}</button>
+    </div>
+  }
+  @default {
+    @if (isEmpty()) {
+      <div class="state">
+        <mat-icon svgIcon="delete" aria-hidden="true" />
+        <p>{{ messages.trash.empty }}</p>
+      </div>
+    } @else {
+      <ul>
+        @for (item of items(); track item.ring.id) {
+          <li>
+            <app-trash-photo [ring]="item.ring" [alt]="messages.history.photoAlt" />
+            <p class="when">{{ item.ringedLabel }}</p>
+            <p class="when removed">{{ item.removedLabel }}</p>
+            <div class="tools">
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="restore(item.ring)"
+                [disabled]="item.busy"
+                [attr.aria-label]="item.restoreLabel"
+              >
+                <mat-icon svgIcon="restore-from-trash" aria-hidden="true" />
+                {{ messages.trash.restore }}
+              </button>
+              <button
+                mat-icon-button
+                type="button"
+                (click)="purge(item.ring)"
+                [disabled]="item.busy"
+                [attr.aria-label]="item.purgeLabel"
+              >
+                <mat-icon svgIcon="delete-forever" aria-hidden="true" />
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+      @if (hasMore()) {
+        <div class="more">
+          <button mat-stroked-button type="button" (click)="loadMore()" [disabled]="loadingMore()">
+            {{ messages.history.loadMore }}
+          </button>
+        </div>
+      }
+    }
+  }
+}

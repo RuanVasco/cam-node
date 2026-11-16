@@ -8,6 +8,9 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 
+import { provideRouter } from '@angular/router';
+
+import { routes } from './app.routes';
 import { apiErrorInterceptor } from './core/http/api-error.interceptor';
 import { registerIcons } from './core/icons/icons';
 
@@ -17,6 +20,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withFetch(), withInterceptors([apiErrorInterceptor])),
+    provideRouter(routes),
     provideAppInitializer(registerIcons),
     { provide: LOCALE_ID, useValue: 'pt-BR' },
   ],

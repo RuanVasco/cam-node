@@ -1,12 +1,14 @@
 <mat-toolbar>
   <mat-icon svgIcon="doorbell" aria-hidden="true" />
-  <h1>{{ messages.appTitle }}</h1>
+  <h1>{{ title() }}</h1>
   <span class="spacer"></span>
-  <span class="connection" [class.live]="isLive()" role="status">
-    <mat-icon [svgIcon]="isLive() ? 'sensors' : 'sync'" aria-hidden="true" />
-    {{ connectionLabel() }}
-  </span>
+  @if (!inTrash()) {
+    <span class="connection" [class.live]="isLive()" role="status">
+      <mat-icon [svgIcon]="isLive() ? 'sensors' : 'sync'" aria-hidden="true" />
+      {{ connectionLabel() }}
+    </span>
+  }
 </mat-toolbar>
 <main>
-  <app-ring-history />
+  <router-outlet />
 </main>
