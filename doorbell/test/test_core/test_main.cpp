@@ -4,6 +4,7 @@
 #include "multipart.h"
 #include "retry_policy.h"
 #include "ring_gate.h"
+#include "send_timing.h"
 
 void setUp() {}
 void tearDown() {}
@@ -82,6 +83,20 @@ void test_spec001_contract_multipart_carries_jpeg_in_photo_field() {
   TEST_ASSERT_EQUAL_STRING("\r\n--b0und--\r\n", body.tail.c_str());
 }
 
+void test_spec003_r9_one_slow_attempt_fits_the_watchdog_with_room_for_dns() {
+  // Between two feeds the loop runs the retry pause (or the capture) plus one attempt;
+  // DNS lookup is not bounded by the attempt limits, so it needs its own slack.
+  constexpr uint32_t kDnsSlackMs = 5000;
+  TEST_ASSERT_LESS_OR_EQUAL_UINT32(send_timing::kWatchdogMs,
+                                   retry_policy::kRetryDelayMs + send_timing::worstAttemptMs() + kDnsSlackMs);
+}
+
+void test_spec003_r9_handshake_is_bounded_well_below_the_core_default() {
+  constexpr uint32_t kCoreDefaultHandshakeS = 120;
+  TEST_ASSERT_LESS_THAN_UINT32(kCoreDefaultHandshakeS, send_timing::kHandshakeTimeoutS);
+  TEST_ASSERT_GREATER_THAN_UINT32(0, send_timing::kHandshakeTimeoutS);
+}
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_spec003_r3_noise_shorter_than_50ms_is_not_a_press);
@@ -93,5 +108,7 @@ int main() {
   RUN_TEST(test_spec003_r6_transport_error_and_5xx_retry_once);
   RUN_TEST(test_spec003_r6_success_and_4xx_never_retry);
   RUN_TEST(test_spec001_contract_multipart_carries_jpeg_in_photo_field);
+  RUN_TEST(test_spec003_r9_one_slow_attempt_fits_the_watchdog_with_room_for_dns);
+  RUN_TEST(test_spec003_r9_handshake_is_bounded_well_below_the_core_default);
   return UNITY_END();
 }

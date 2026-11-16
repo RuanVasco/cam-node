@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "multipart.h"
+#include "send_timing.h"
 
 namespace ring_client {
 
@@ -14,9 +15,6 @@ namespace {
 
 constexpr char kRingsUrl[] = API_URL "/api/v1/rings";
 constexpr char kBoundary[] = "camnode-doorbell-photo";
-// SPEC-003 CA-1 gives 5 s from press to screen; a slower request already missed it.
-constexpr int32_t kConnectTimeoutMs = 4000;
-constexpr uint16_t kResponseTimeoutMs = 4000;
 
 struct PsramDeleter {
   void operator()(uint8_t* buffer) const { free(buffer); }
@@ -49,10 +47,12 @@ Result send(const uint8_t* jpeg, size_t length) {
   // Rule: SPEC-003 #2. Server certificate checked against the core's CA bundle, never setInsecure.
   NetworkClientSecure client;
   client.useBuiltinCACertBundle();
+  // The core default is 120 s, far past the watchdog; HTTPClient's timeouts do not cover it.
+  client.setHandshakeTimeout(send_timing::kHandshakeTimeoutS);
 
   HTTPClient http;
-  http.setConnectTimeout(kConnectTimeoutMs);
-  http.setTimeout(kResponseTimeoutMs);
+  http.setConnectTimeout(send_timing::kConnectTimeoutMs);
+  http.setTimeout(send_timing::kResponseTimeoutMs);
   if (!http.begin(client, kRingsUrl)) {
     return {HTTPC_ERROR_CONNECTION_REFUSED, "network error: invalid API_URL"};
   }

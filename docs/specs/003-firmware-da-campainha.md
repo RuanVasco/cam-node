@@ -62,6 +62,7 @@ Sem tela. Log serial em 115200 baud, uma linha por evento (conexão, toque, tent
 - Botão: até o botão do IF estar em mãos, o toque vem do botão BOOT da própria placa (GPIO0, já com pull-up). O pino é definido na compilação, então trocar pelo botão externo (ligado entre um GPIO livre e o GND) não muda o código. Disparo por timer foi descartado: gera toques que ninguém fez e não exercita o debounce (#3).
 - Rede do IF: "IFRS Alunos" usa WPA3-Personal (SSID e senha, sem portal nem Enterprise), suportado pelo ESP32-S3. O ESP32 só opera em 2,4 GHz; se a rede não oferecer essa faixa, não conecta. Plano B: hotspot de celular em 2,4 GHz.
 - Bot Fight Mode da Cloudflare pode desafiar um cliente que não é navegador; conferir com a placa real antes da apresentação.
+- Tempos de envio (#6, #9): na rede do IF, com sinal em -72 dBm, um envio bem-sucedido levou até 17 s e conexões foram cortadas no limite de 4 s, então o CA-1 (5 s) só vale com rede boa. Cada tentativa tem teto próprio: conexão em 8 s, handshake TLS em 10 s (o padrão do core é 120 s e não é coberto pelos timeouts do `HTTPClient`) e resposta em 8 s. O watchdog é alimentado antes de cada tentativa e tem 45 s, cobrindo a pausa de 2 s e uma tentativa no pior caso. Timeouts curtos foram descartados porque derrubam toques que chegariam; watchdog sem alimentação por tentativa foi descartado porque duas tentativas lentas reiniciariam a placa no meio do envio.
 - O relógio do dispositivo não é usado para o momento do toque (SPEC-001 #5) nem na validação do certificado: o mbedTLS do Arduino-ESP32 é compilado sem checagem de data (`MBEDTLS_HAVE_TIME_DATE` desligado) e valida cadeia e nome do host. Por isso não há NTP, que a rede do IF bloquearia (UDP 123).
 
 ## Histórico
@@ -71,3 +72,4 @@ Sem tela. Log serial em 115200 baud, uma linha por evento (conexão, toque, tent
 | 2026-11-16 | Criação |
 | 2026-11-16 | Placa, botão provisório (BOOT) e tipo da rede do IF definidos |
 | 2026-11-16 | Sem NTP: a validação do certificado não depende da data |
+| 2026-11-16 | Tempos de envio por tentativa e watchdog alimentado a cada tentativa, após falhas na rede do IF |

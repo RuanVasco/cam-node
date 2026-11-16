@@ -6,6 +6,7 @@
 #include "retry_policy.h"
 #include "ring_client.h"
 #include "ring_gate.h"
+#include "send_timing.h"
 #include "wifi_link.h"
 
 namespace {
@@ -13,8 +14,6 @@ namespace {
 constexpr uint32_t kDebounceMs = 50;      // Rule: SPEC-003 #3
 constexpr uint32_t kCooldownMs = 5000;    // Rule: SPEC-001 #8
 constexpr size_t kMaxPhotoBytes = 2 * 1024 * 1024;  // Rule: SPEC-001 #4
-// Rule: SPEC-003 #9. Two attempts with their timeouts and the 2 s pause fit well under it.
-constexpr uint32_t kWatchdogMs = 30000;
 
 Debouncer debouncer(kDebounceMs);
 RingGate ringGate(kCooldownMs);
@@ -28,7 +27,7 @@ void restartAfter(const char* reason) {
 
 void startWatchdog() {
   esp_task_wdt_config_t config = {
-      .timeout_ms = kWatchdogMs,
+      .timeout_ms = send_timing::kWatchdogMs,
       .idle_core_mask = 0,
       .trigger_panic = true,
   };
@@ -54,6 +53,8 @@ void sendRing() {
   }
 
   for (int attempt = 1;; attempt++) {
+    // Each attempt is bounded on its own; a hang inside one still trips the watchdog.
+    esp_task_wdt_reset();
     uint32_t startedMs = millis();
     ring_client::Result result = ring_client::send(photo->buf, photo->len);
     Serial.printf("[ring] attempt %d: %s (%u bytes, %lu ms)\n", attempt, result.description.c_str(),
