@@ -74,15 +74,17 @@ class RingStorageUnavailableIT {
     }
 
     @Test
-    @DisplayName("SPEC-010 CA-3 (#3): with storage down the removal is 204, the photo is 404 at once and stays queued")
-    void removalWithStorageDown() {
+    @DisplayName("SPEC-010 CA-3 (#3, #12): with storage down purging is 204, the photo is 404 at once and stays queued")
+    void purgeWithStorageDown() {
         UUID id = repository.save(new Ring(Instant.parse("2026-11-20T12:00:00Z"), "down/photo.jpg", 1)).getId();
+        jdbc.update("UPDATE ring SET removed_at = now() WHERE id = ?", id);
 
-        HttpStatusCode status = reader.delete().uri("/api/v1/rings/{id}", id)
+        HttpStatusCode status = reader.delete().uri("/api/v1/trash/{id}", id)
                 .header("X-Admin-Key", RingUploadClient.ADMIN_KEY)
                 .exchange((request, response) -> response.getStatusCode());
         photoDeletions.retryPending();
-        HttpStatusCode photoStatus = reader.get().uri("/api/v1/rings/{id}/photo", id)
+        HttpStatusCode photoStatus = reader.get().uri("/api/v1/trash/{id}/photo", id)
+                .header("X-Admin-Key", RingUploadClient.ADMIN_KEY)
                 .exchange((request, response) -> response.getStatusCode());
 
         assertThat(status).isEqualTo(HttpStatus.NO_CONTENT);

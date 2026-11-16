@@ -11,7 +11,6 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
@@ -40,56 +39,51 @@ class AdminKeyIT {
     }
 
     @Test
-    @DisplayName("SPEC-010 CA-8 (#7): without the admin key the removal is 401 and the ring stays")
+    @DisplayName("SPEC-010 CA-8 (#7): without the admin key every trash route is 401 and the ring stays in the trash")
     void missingKey() {
-        UUID id = upload();
+        UUID id = uploadToTrash();
 
-        assertThat(removeStatus(id, null)).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(exists(id)).isTrue();
+        assertThat(status(client.get().uri("/api/v1/trash"), null)).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(status(client.get().uri("/api/v1/trash/{id}/photo", id), null)).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(status(client.post().uri("/api/v1/trash/{id}/restore", id), null)).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(status(client.delete().uri("/api/v1/trash/{id}", id), null)).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(inTrash(id)).isTrue();
     }
 
     @Test
-    @DisplayName("SPEC-010 CA-8 (#7): with a wrong admin key both removal routes are 401 and the ring stays")
+    @DisplayName("SPEC-010 CA-8 (#7): with a wrong admin key restore and purge are 401 and the ring stays in the trash")
     void wrongKey() {
-        UUID id = upload();
+        UUID id = uploadToTrash();
 
-        assertThat(removeStatus(id, "wrong")).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(bulkRemoveStatus(id, "wrong")).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(exists(id)).isTrue();
+        assertThat(status(client.post().uri("/api/v1/trash/{id}/restore", id), "wrong")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(status(client.delete().uri("/api/v1/trash/{id}", id), "wrong")).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(inTrash(id)).isTrue();
     }
 
     @Test
-    @DisplayName("SPEC-010 #7: reads stay public")
-    void readsNeedNoKey() {
-        HttpStatusCode status = client.get().uri("/api/v1/rings").exchange((request, r) -> r.getStatusCode());
-
-        assertThat(status).isEqualTo(HttpStatus.OK);
+    @DisplayName("SPEC-010 #7: the history stays public")
+    void historyNeedsNoKey() {
+        assertThat(status(client.get().uri("/api/v1/rings"), null)).isEqualTo(HttpStatus.OK);
     }
 
-    private UUID upload() {
+    private UUID uploadToTrash() {
         uploader.upload(TestPhotos.jpeg(512), "image/jpeg", RingUploadClient.DEVICE_KEY);
-        return jdbc.queryForObject("SELECT id FROM ring ORDER BY ringed_at DESC, id DESC LIMIT 1", UUID.class);
+        UUID id = jdbc.queryForObject("SELECT id FROM ring ORDER BY ringed_at DESC, id DESC LIMIT 1", UUID.class);
+        assertThat(status(client.delete().uri("/api/v1/rings/{id}", id), null)).isEqualTo(HttpStatus.NO_CONTENT);
+        return id;
     }
 
-    private boolean exists(UUID id) {
-        return jdbc.queryForObject("SELECT count(*) FROM ring WHERE id = ?", Integer.class, id) == 1;
+    private boolean inTrash(UUID id) {
+        return jdbc.queryForObject("SELECT count(*) FROM ring WHERE id = ? AND removed_at IS NOT NULL", Integer.class, id) == 1;
     }
 
-    private HttpStatusCode removeStatus(UUID id, String key) {
-        return client.delete().uri("/api/v1/rings/{id}", id)
+    private static HttpStatusCode status(RestClient.RequestHeadersSpec<?> request, String key) {
+        return request
                 .headers(headers -> {
                     if (key != null) {
                         headers.set(AdminKeyInterceptor.HEADER, key);
                     }
                 })
-                .exchange((request, response) -> response.getStatusCode());
-    }
-
-    private HttpStatusCode bulkRemoveStatus(UUID id, String key) {
-        return client.post().uri("/api/v1/rings/removal")
-                .header(AdminKeyInterceptor.HEADER, key)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"ids\":[\"" + id + "\"]}")
-                .exchange((request, response) -> response.getStatusCode());
+                .exchange((req, response) -> response.getStatusCode());
     }
 }

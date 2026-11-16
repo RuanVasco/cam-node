@@ -21,8 +21,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.ruanvascolabs.camnode.ring.RingMapper;
 import com.ruanvascolabs.camnode.ring.RingRegistered;
+import com.ruanvascolabs.camnode.ring.RingRestored;
 import com.ruanvascolabs.camnode.ring.RingsRemoved;
 import com.ruanvascolabs.camnode.ring.dto.RingRemovedResponse;
+import com.ruanvascolabs.camnode.ring.dto.RingResponse;
 
 /**
  * Subscribers live in process memory, which only works with a single API replica (ADR-001).
@@ -42,6 +44,7 @@ class SseRingNotifier implements SmartLifecycle, DisposableBean {
 
     static final String RING_EVENT = "ring";
     static final String RING_REMOVED_EVENT = "ring-removed";
+    static final String RING_RESTORED_EVENT = "ring-restored";
     static final String HEARTBEAT_COMMENT = "heartbeat";
 
     private final NotificationProperties properties;
@@ -85,12 +88,21 @@ class SseRingNotifier implements SmartLifecycle, DisposableBean {
     /** Rule: SPEC-002 #4. */
     @EventListener
     void onRingRegistered(RingRegistered event) {
-        var payload = RingMapper.toResponse(event);
+        broadcastRing(RING_EVENT, RingMapper.toResponse(event));
+    }
+
+    /** Rule: SPEC-010 #11. */
+    @EventListener
+    void onRingRestored(RingRestored event) {
+        broadcastRing(RING_RESTORED_EVENT, RingMapper.toResponse(event));
+    }
+
+    private void broadcastRing(String eventName, RingResponse payload) {
         try {
-            scheduler.execute(() -> broadcast(SseEmitter.event().name(RING_EVENT).data(payload, MediaType.APPLICATION_JSON)));
+            scheduler.execute(() -> broadcast(SseEmitter.event().name(eventName).data(payload, MediaType.APPLICATION_JSON)));
         } catch (RejectedExecutionException e) {
-            // Bean destroyed: subscribers are already closed and the ring is saved, so the upload must not fail.
-            log.info("Ring {} not broadcast, notifier destroyed", event.id());
+            // Bean destroyed: subscribers are already closed and the ring is saved, so the request must not fail.
+            log.info("Ring {} not broadcast as {}, notifier destroyed", payload.id(), eventName);
         }
     }
 

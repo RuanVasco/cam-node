@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Rule: SPEC-010 #3. A removed ring's photo key is recorded in the same transaction that deletes the ring, then
+ * Rule: SPEC-010 #3. A purged ring's photo key is recorded in the same transaction that deletes the ring, then
  * deleted from storage after the commit. Whatever storage refuses stays queued and is retried on a schedule, well
  * inside the 24 h the spec allows. The ring row is already gone, so a queued photo is never served again.
  *

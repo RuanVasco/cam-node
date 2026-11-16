@@ -27,6 +27,10 @@ public final class RingMapper {
         return new RingResponse(event.id(), event.ringedAt(), photoUrl(event.id()));
     }
 
+    public static RingResponse toResponse(RingRestored event) {
+        return new RingResponse(event.id(), event.ringedAt(), photoUrl(event.id()));
+    }
+
     public static List<RingRemovedResponse> toResponses(RingsRemoved event) {
         return event.ids().stream().map(RingRemovedResponse::new).toList();
     }

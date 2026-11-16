@@ -36,7 +36,7 @@ class RingController {
 
     static final String BASE_PATH = "/api/v1/rings";
 
-    private static final int MAX_PAGE = 1_000_000;
+    static final int MAX_PAGE = 1_000_000;
 
     /** Rule: SPEC-002 #3. */
     private static final CacheControl PHOTO_CACHE = CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable();

@@ -28,6 +28,10 @@ class Ring {
     @Column(name = "photo_size_bytes", nullable = false)
     private int photoSizeBytes;
 
+    // Null while the ring is in the history; set while it is in the trash. Rule: SPEC-010 #9.
+    @Column(name = "removed_at")
+    private Instant removedAt;
+
     protected Ring() {
     }
 
@@ -51,5 +55,9 @@ class Ring {
 
     int getPhotoSizeBytes() {
         return photoSizeBytes;
+    }
+
+    Instant getRemovedAt() {
+        return removedAt;
     }
 }

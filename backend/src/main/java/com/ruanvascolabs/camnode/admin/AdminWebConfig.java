@@ -3,7 +3,6 @@ package com.ruanvascolabs.camnode.admin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -22,11 +21,9 @@ class AdminWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        if (!properties.removalEnabled()) {
-            log.warn("Admin key not configured (ADMIN_API_KEY): ring removal is disabled");
+        if (!properties.trashEnabled()) {
+            log.warn("Admin key not configured (ADMIN_API_KEY): the trash is disabled");
         }
-        registry.addInterceptor(new AdminKeyInterceptor(verifier, HttpMethod.DELETE)).addPathPatterns("/api/v1/rings/*");
-        registry.addInterceptor(new AdminKeyInterceptor(verifier, HttpMethod.POST))
-                .addPathPatterns("/api/v1/rings/removal");
+        registry.addInterceptor(new AdminKeyInterceptor(verifier)).addPathPatterns("/api/v1/trash", "/api/v1/trash/**");
     }
 }

@@ -66,7 +66,6 @@ class RingStreamIT {
             UUID second = uploadAndAwait(stream);
 
             HttpStatusCode status = RestClient.create("http://localhost:" + port).post().uri("/api/v1/rings/removal")
-                    .header("X-Admin-Key", RingUploadClient.ADMIN_KEY)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body("{\"ids\":[\"" + first + "\",\"" + second + "\"]}")
                     .exchange((request, response) -> response.getStatusCode());
@@ -76,6 +75,31 @@ class RingStreamIT {
                 assertThat(stream.awaitLine("event:", WAIT)).isEqualTo("event:ring-removed");
                 assertThat(stream.awaitLine("data:", WAIT)).isEqualTo("data:{\"id\":\"" + id + "\"}");
             }
+        }
+    }
+
+    @Test
+    @DisplayName("SPEC-010 CA-4 (#11): a subscriber receives ring-restored with the original ring within 2 s of a restore")
+    void receivesRingRestoredEvent() throws InterruptedException {
+        try (SseTestClient stream = new SseTestClient(port)) {
+            assertThat(stream.awaitLine(":", WAIT)).as("subscribed").isNotNull();
+            var upload = new RingUploadClient(port).upload(TestPhotos.jpeg(1024), "image/jpeg", RingUploadClient.DEVICE_KEY);
+            assertThat(stream.awaitLine("event:", WAIT)).isEqualTo("event:ring");
+            stream.awaitLine("data:", WAIT);
+            String path = upload.headers().getLocation().getPath();
+            UUID id = UUID.fromString(path.substring(path.lastIndexOf('/') + 1));
+            RestClient client = RestClient.create("http://localhost:" + port);
+            client.delete().uri("/api/v1/rings/{id}", id).exchange((request, response) -> response.getStatusCode());
+            assertThat(stream.awaitLine("event:", WAIT)).isEqualTo("event:ring-removed");
+            stream.awaitLine("data:", WAIT);
+
+            HttpStatusCode status = client.post().uri("/api/v1/trash/{id}/restore", id)
+                    .header("X-Admin-Key", RingUploadClient.ADMIN_KEY)
+                    .exchange((request, response) -> response.getStatusCode());
+
+            assertThat(status).isEqualTo(HttpStatus.NO_CONTENT);
+            assertThat(stream.awaitLine("event:", WAIT)).isEqualTo("event:ring-restored");
+            assertThat(stream.awaitLine("data:", WAIT)).isEqualTo("data:" + upload.body());
         }
     }
 

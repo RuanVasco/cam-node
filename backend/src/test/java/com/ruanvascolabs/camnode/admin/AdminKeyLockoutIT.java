@@ -55,19 +55,20 @@ class AdminKeyLockoutIT {
     void lockedAfterFiveFailures() {
         uploader.upload(TestPhotos.jpeg(512), "image/jpeg", RingUploadClient.DEVICE_KEY);
         UUID id = jdbc.queryForObject("SELECT id FROM ring ORDER BY ringed_at DESC, id DESC LIMIT 1", UUID.class);
+        jdbc.update("UPDATE ring SET removed_at = now() WHERE id = ?", id);
         for (int i = 0; i < 5; i++) {
-            assertThat(remove(id, "wrong").status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(purge(id, "wrong").status()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
 
-        Answer answer = remove(id, ADMIN_KEY);
+        Answer answer = purge(id, ADMIN_KEY);
 
         assertThat(answer.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(Long.parseLong(answer.retryAfter())).isBetween(1L, 900L);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM ring WHERE id = ?", Integer.class, id)).isEqualTo(1);
     }
 
-    private Answer remove(UUID id, String key) {
-        return client.delete().uri("/api/v1/rings/{id}", id)
+    private Answer purge(UUID id, String key) {
+        return client.delete().uri("/api/v1/trash/{id}", id)
                 .header(AdminKeyInterceptor.HEADER, key)
                 .exchange((request, r) -> new Answer(r.getStatusCode(), r.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)));
     }

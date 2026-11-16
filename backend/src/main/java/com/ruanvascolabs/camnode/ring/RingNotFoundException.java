@@ -8,8 +8,8 @@ public class RingNotFoundException extends RuntimeException {
         super("Ring not found: " + id);
     }
 
-    // A ring removed concurrently: the delete count does not say which one.
+    // A bulk update counts rows, it does not say which id was missing or already in the trash.
     RingNotFoundException() {
-        super("Ring removed concurrently");
+        super("Ring not found or already removed");
     }
 }

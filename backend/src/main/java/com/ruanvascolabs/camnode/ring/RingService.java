@@ -10,7 +10,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
 import com.ruanvascolabs.camnode.photo.JpegSignature;
-import com.ruanvascolabs.camnode.photo.PhotoDeletionQueue;
 import com.ruanvascolabs.camnode.photo.PhotoStorage;
 
 @Service
@@ -32,16 +30,14 @@ class RingService {
 
     private final RingRepository repository;
     private final PhotoStorage photoStorage;
-    private final PhotoDeletionQueue photoDeletions;
     private final ApplicationEventPublisher events;
     private final TransactionOperations transaction;
     private final Clock clock;
 
-    RingService(RingRepository repository, PhotoStorage photoStorage, PhotoDeletionQueue photoDeletions,
-            ApplicationEventPublisher events, TransactionOperations transaction, Clock clock) {
+    RingService(RingRepository repository, PhotoStorage photoStorage, ApplicationEventPublisher events,
+            TransactionOperations transaction, Clock clock) {
         this.repository = repository;
         this.photoStorage = photoStorage;
-        this.photoDeletions = photoDeletions;
         this.events = events;
         this.transaction = transaction;
         this.clock = clock;
@@ -53,8 +49,7 @@ class RingService {
      * photo (Rule: SPEC-001 #6); a failed insert leaves an orphan object instead (ADR-002).
      */
     Ring register(byte[] photo) {
-        // Postgres keeps microseconds; truncating here makes the upload response match what the history returns.
-        Instant ringedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        Instant ringedAt = now();
         if (photo.length == 0) {
             throw new EmptyPhotoException();
         }
@@ -72,39 +67,33 @@ class RingService {
 
     /** Rule: SPEC-002 #2. Sizes above the maximum are capped, not rejected. */
     Page<Ring> history(int page, int size) {
-        return repository.findAllByOrderByRingedAtDescIdDesc(PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)));
+        return repository.findAllByRemovedAtIsNullOrderByRingedAtDescIdDesc(
+                PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)));
     }
 
+    /** Rule: SPEC-010 #9. A ring in the trash is not served here. */
     RingPhoto photo(UUID id) {
-        Ring ring = repository.findById(id).orElseThrow(() -> new RingNotFoundException(id));
+        Ring ring = repository.findByIdAndRemovedAtIsNull(id).orElseThrow(() -> new RingNotFoundException(id));
         return new RingPhoto(photoStorage.open(ring.getPhotoKey()), ring.getPhotoSizeBytes());
     }
 
     /**
-     * Rule: SPEC-010 #2, #3, #6. All or nothing: a missing id, including one removed concurrently, rolls the whole
-     * removal back. Only database work runs in the transaction; the photos leave storage after the commit.
+     * Rule: SPEC-010 #6, #9. Moves the rings to the trash, all or nothing: an id that is missing or already in the
+     * trash, including one moved concurrently, makes the update count fall short and rolls everything back.
      */
     void remove(Collection<UUID> requestedIds) {
         Set<UUID> ids = new LinkedHashSet<>(requestedIds);
-        List<String> photoKeys = transaction.execute(status -> {
-            List<Ring> rings = repository.findAllById(ids);
-            if (rings.size() != ids.size()) {
-                throw new RingNotFoundException(firstMissing(ids, rings));
-            }
-            // A concurrent removal deletes some rows first; the count tells, and the exception rolls back.
-            if (repository.deleteByIds(ids) != ids.size()) {
+        Instant removedAt = now();
+        transaction.executeWithoutResult(status -> {
+            if (repository.moveToTrash(ids, removedAt) != ids.size()) {
                 throw new RingNotFoundException();
             }
-            List<String> keys = rings.stream().map(Ring::getPhotoKey).toList();
-            photoDeletions.enqueue(keys);
-            return keys;
         });
         events.publishEvent(new RingsRemoved(List.copyOf(ids)));
-        photoDeletions.deleteNow(photoKeys);
     }
 
-    private static UUID firstMissing(Set<UUID> ids, List<Ring> found) {
-        Set<UUID> foundIds = found.stream().map(Ring::getId).collect(Collectors.toSet());
-        return ids.stream().filter(id -> !foundIds.contains(id)).findFirst().orElseThrow();
+    // Postgres keeps microseconds; truncating here makes responses match what later reads return.
+    private Instant now() {
+        return clock.instant().truncatedTo(ChronoUnit.MICROS);
     }
 }

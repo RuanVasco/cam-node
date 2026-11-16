@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +28,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionOperations;
 
-import com.ruanvascolabs.camnode.photo.PhotoDeletionQueue;
 import com.ruanvascolabs.camnode.photo.PhotoStorage;
 import com.ruanvascolabs.camnode.support.TestPhotos;
 
@@ -37,9 +37,8 @@ class RingServiceTest {
 
     private final RingRepository repository = mock(RingRepository.class);
     private final PhotoStorage photoStorage = mock(PhotoStorage.class);
-    private final PhotoDeletionQueue photoDeletions = mock(PhotoDeletionQueue.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-    private final RingService service = new RingService(repository, photoStorage, photoDeletions, events,
+    private final RingService service = new RingService(repository, photoStorage, events,
             TransactionOperations.withoutTransaction(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
@@ -104,51 +103,44 @@ class RingServiceTest {
     @Test
     @DisplayName("SPEC-002 #2: page size above 100 is capped at 100")
     void capsPageSize() {
-        when(repository.findAllByOrderByRingedAtDescIdDesc(any())).thenReturn(Page.empty());
+        when(repository.findAllByRemovedAtIsNullOrderByRingedAtDescIdDesc(any())).thenReturn(Page.empty());
 
         service.history(0, 500);
 
-        verify(repository).findAllByOrderByRingedAtDescIdDesc(PageRequest.of(0, 100));
+        verify(repository).findAllByRemovedAtIsNullOrderByRingedAtDescIdDesc(PageRequest.of(0, 100));
     }
 
     @Test
-    @DisplayName("SPEC-002 #3: photo of an unknown ring is not found and storage is not touched")
+    @DisplayName("SPEC-002 #3, SPEC-010 #9: photo of an unknown or trashed ring is not found and storage is not touched")
     void photoOfUnknownRing() {
         UUID id = UUID.randomUUID();
-        when(repository.findById(id)).thenReturn(Optional.empty());
+        when(repository.findByIdAndRemovedAtIsNull(id)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.photo(id)).isInstanceOf(RingNotFoundException.class);
         verify(photoStorage, never()).open(anyString());
     }
 
     @Test
-    @DisplayName("SPEC-010 #6: a ring removed concurrently between read and delete fails the whole removal")
-    void concurrentRemovalFails() {
-        Ring ring = new Ring(NOW, "2026/11/23/a.jpg", 1);
-        UUID id = UUID.randomUUID();
-        ReflectionTestUtils.setField(ring, "id", id);
-        when(repository.findAllById(any())).thenReturn(List.of(ring));
-        when(repository.deleteByIds(any())).thenReturn(0);
+    @DisplayName("SPEC-010 #6: a ring missing or already in the trash fails the whole removal and announces nothing")
+    void shortUpdateFailsRemoval() {
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        when(repository.moveToTrash(any(), any())).thenReturn(1);
 
-        assertThatThrownBy(() -> service.remove(List.of(id))).isInstanceOf(RingNotFoundException.class);
-        verify(photoDeletions, never()).enqueue(any());
-        verify(photoDeletions, never()).deleteNow(any());
+        assertThatThrownBy(() -> service.remove(List.of(first, second))).isInstanceOf(RingNotFoundException.class);
         verify(events, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("SPEC-010 #3, #4: a removal queues the photo, announces the ring and then deletes the photo")
-    void removalQueuesAnnouncesAndDeletes() {
-        Ring ring = new Ring(NOW, "2026/11/23/a.jpg", 1);
+    @DisplayName("SPEC-010 #4, #9: a removal moves the rings to the trash at the backend clock and announces them")
+    void removalMovesToTrashAndAnnounces() {
         UUID id = UUID.randomUUID();
-        ReflectionTestUtils.setField(ring, "id", id);
-        when(repository.findAllById(any())).thenReturn(List.of(ring));
-        when(repository.deleteByIds(any())).thenReturn(1);
+        when(repository.moveToTrash(any(), any())).thenReturn(1);
 
-        service.remove(List.of(id));
+        service.remove(List.of(id, id));
 
-        verify(photoDeletions).enqueue(List.of("2026/11/23/a.jpg"));
+        verify(repository).moveToTrash(Set.of(id), NOW);
         verify(events).publishEvent(new RingsRemoved(List.of(id)));
-        verify(photoDeletions).deleteNow(List.of("2026/11/23/a.jpg"));
+        verify(photoStorage, never()).delete(anyString());
     }
 }

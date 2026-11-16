@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * Rule: SPEC-010 #7, #8. Temporary until login exists (SPEC-004).
  *
  * <p>The lockout is global, not per client: behind Cloudflare the client address would mean trusting a forwarded
- * header, and anyone can still lock removal out for a window (accepted in the plan). Checking the lock and recording
+ * header, and anyone can still lock the trash out for a window (accepted in the plan). Checking the lock and recording
  * a failure happen under one lock, so parallel guesses can not all slip past the check before any is counted.
  */
 @Component
@@ -28,7 +28,7 @@ class AdminKeyVerifier {
     private final Deque<Instant> failures = new ArrayDeque<>();
 
     AdminKeyVerifier(AdminProperties properties, Clock clock) {
-        this.expectedKey = properties.removalEnabled() ? properties.apiKey().getBytes(StandardCharsets.UTF_8) : null;
+        this.expectedKey = properties.trashEnabled() ? properties.apiKey().getBytes(StandardCharsets.UTF_8) : null;
         this.clock = clock;
     }
 
