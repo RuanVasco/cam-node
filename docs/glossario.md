@@ -32,3 +32,6 @@ Ao criar termo novo, acrescentar aqui antes de usar no código.
 | Notificação push | `pushNotification` | Aviso de toque entregue no celular mesmo com o app fechado (SPEC-009). |
 | Token de push | `pushToken` | Identificador de um celular no serviço de push, registrado pelo app. |
 | Remoção de toque | `ringRemoval` | Exclusão definitiva de um toque e da sua foto (SPEC-010). |
+| Senha de administrador | `adminApiKey` | Segredo enviado em header para remover toques enquanto não há login (SPEC-010 #7). |
+| Bloqueio de tentativas | `adminKeyLockout` | Recusa temporária da remoção depois de senhas de administrador erradas demais (SPEC-010 #8). |
+| Remoção pendente de foto | `PendingPhotoDeletion` | Foto de toque removido que ainda precisa ser apagada do armazenamento (SPEC-010 #3). |
