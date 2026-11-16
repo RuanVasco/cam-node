@@ -3,13 +3,19 @@ package com.ruanvascolabs.camnode.notification;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.client.RestClient;
 
 import com.ruanvascolabs.camnode.support.MinioTestConfiguration;
 import com.ruanvascolabs.camnode.support.PostgresTestConfiguration;
@@ -21,6 +27,7 @@ import com.ruanvascolabs.camnode.support.TestPhotos;
 @Import({PostgresTestConfiguration.class, MinioTestConfiguration.class})
 @TestPropertySource(properties = {
         "camnode.device.api-key=" + RingUploadClient.DEVICE_KEY,
+        "camnode.admin.api-key=" + RingUploadClient.ADMIN_KEY,
         // Short interval so CA-6 does not wait 65 s in real time.
         "camnode.notification.heartbeat-interval=200ms"
 })
@@ -48,6 +55,38 @@ class RingStreamIT {
             String data = stream.awaitLine("data:", WAIT);
             assertThat(data).isEqualTo("data:" + upload.body());
         }
+    }
+
+    @Test
+    @DisplayName("SPEC-010 CA-4 (#4): a subscriber receives ring-removed within 2 s of a removal")
+    void receivesRingRemovedEvent() throws InterruptedException {
+        try (SseTestClient stream = new SseTestClient(port)) {
+            assertThat(stream.awaitLine(":", WAIT)).as("subscribed").isNotNull();
+            UUID first = uploadAndAwait(stream);
+            UUID second = uploadAndAwait(stream);
+
+            HttpStatusCode status = RestClient.create("http://localhost:" + port).post().uri("/api/v1/rings/removal")
+                    .header("X-Admin-Key", RingUploadClient.ADMIN_KEY)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"ids\":[\"" + first + "\",\"" + second + "\"]}")
+                    .exchange((request, response) -> response.getStatusCode());
+
+            assertThat(status).isEqualTo(HttpStatus.NO_CONTENT);
+            for (UUID id : List.of(first, second)) {
+                assertThat(stream.awaitLine("event:", WAIT)).isEqualTo("event:ring-removed");
+                assertThat(stream.awaitLine("data:", WAIT)).isEqualTo("data:{\"id\":\"" + id + "\"}");
+            }
+        }
+    }
+
+    // Waits for the ring event too, so it can not arrive after the removal events.
+    private UUID uploadAndAwait(SseTestClient stream) throws InterruptedException {
+        var upload = new RingUploadClient(port).upload(TestPhotos.jpeg(1024), "image/jpeg", RingUploadClient.DEVICE_KEY);
+        assertThat(upload.status()).isEqualTo(HttpStatus.CREATED);
+        assertThat(stream.awaitLine("event:", WAIT)).isEqualTo("event:ring");
+        stream.awaitLine("data:", WAIT);
+        String path = upload.headers().getLocation().getPath();
+        return UUID.fromString(path.substring(path.lastIndexOf('/') + 1));
     }
 
     @Test

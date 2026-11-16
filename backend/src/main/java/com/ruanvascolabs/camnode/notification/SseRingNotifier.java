@@ -1,6 +1,7 @@
 package com.ruanvascolabs.camnode.notification;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -20,6 +21,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.ruanvascolabs.camnode.ring.RingMapper;
 import com.ruanvascolabs.camnode.ring.RingRegistered;
+import com.ruanvascolabs.camnode.ring.RingsRemoved;
+import com.ruanvascolabs.camnode.ring.dto.RingRemovedResponse;
 
 /**
  * Subscribers live in process memory, which only works with a single API replica (ADR-001).
@@ -38,6 +41,7 @@ class SseRingNotifier implements SmartLifecycle, DisposableBean {
     private static final Logger log = LoggerFactory.getLogger(SseRingNotifier.class);
 
     static final String RING_EVENT = "ring";
+    static final String RING_REMOVED_EVENT = "ring-removed";
     static final String HEARTBEAT_COMMENT = "heartbeat";
 
     private final NotificationProperties properties;
@@ -90,15 +94,37 @@ class SseRingNotifier implements SmartLifecycle, DisposableBean {
         }
     }
 
+    /** Rule: SPEC-010 #4. One event per ring, so clients handle a bulk removal like single ones. */
+    @EventListener
+    void onRingsRemoved(RingsRemoved event) {
+        Collection<RingRemovedResponse> payloads = RingMapper.toResponses(event);
+        List<SseEmitter.SseEventBuilder> events = payloads.stream()
+                .map(payload -> SseEmitter.event().name(RING_REMOVED_EVENT).data(payload, MediaType.APPLICATION_JSON))
+                .toList();
+        try {
+            scheduler.execute(() -> broadcast(events));
+        } catch (RejectedExecutionException e) {
+            // Bean destroyed: subscribers are already closed and the removal is committed, so it must not fail.
+            log.info("Removal of {} ring(s) not broadcast, notifier destroyed", payloads.size());
+        }
+    }
+
     /** Rule: SPEC-002 #5. */
     void sendHeartbeat() {
         broadcast(SseEmitter.event().comment(HEARTBEAT_COMMENT));
     }
 
     private void broadcast(SseEmitter.SseEventBuilder event) {
+        broadcast(List.of(event));
+    }
+
+    // Subscribers on the outside: a failing one is dropped once instead of being retried for every event.
+    private void broadcast(List<SseEmitter.SseEventBuilder> events) {
         for (SseEmitter emitter : subscribers) {
             try {
-                emitter.send(event);
+                for (SseEmitter.SseEventBuilder event : events) {
+                    emitter.send(event);
+                }
             } catch (IOException | IllegalStateException e) {
                 // The client went away; dropping it here keeps the list from growing with dead connections.
                 subscribers.remove(emitter);

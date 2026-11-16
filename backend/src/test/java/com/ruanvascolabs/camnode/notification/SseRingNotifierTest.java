@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.ruanvascolabs.camnode.ring.RingRegistered;
+import com.ruanvascolabs.camnode.ring.RingsRemoved;
 
 class SseRingNotifierTest {
 
@@ -48,6 +50,15 @@ class SseRingNotifierTest {
         notifier.destroy();
 
         assertThatCode(() -> notifier.onRingRegistered(new RingRegistered(UUID.randomUUID(), Instant.EPOCH)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("SPEC-010 #4: a removal after the notifier is destroyed does not fail the removal")
+    void removalAfterDestroyIsIgnored() {
+        notifier.destroy();
+
+        assertThatCode(() -> notifier.onRingsRemoved(new RingsRemoved(List.of(UUID.randomUUID()))))
                 .doesNotThrowAnyException();
     }
 

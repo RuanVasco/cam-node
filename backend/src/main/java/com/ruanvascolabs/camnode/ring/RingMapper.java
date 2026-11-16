@@ -1,10 +1,12 @@
 package com.ruanvascolabs.camnode.ring;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 
 import com.ruanvascolabs.camnode.ring.dto.RingPageResponse;
+import com.ruanvascolabs.camnode.ring.dto.RingRemovedResponse;
 import com.ruanvascolabs.camnode.ring.dto.RingResponse;
 
 public final class RingMapper {
@@ -23,6 +25,10 @@ public final class RingMapper {
 
     public static RingResponse toResponse(RingRegistered event) {
         return new RingResponse(event.id(), event.ringedAt(), photoUrl(event.id()));
+    }
+
+    public static List<RingRemovedResponse> toResponses(RingsRemoved event) {
+        return event.ids().stream().map(RingRemovedResponse::new).toList();
     }
 
     static String photoUrl(UUID id) {
