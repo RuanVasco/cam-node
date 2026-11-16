@@ -62,7 +62,7 @@ Sem tela. Log serial em 115200 baud, uma linha por evento (conexão, toque, tent
 - Botão: até o botão do IF estar em mãos, o toque vem do botão BOOT da própria placa (GPIO0, já com pull-up). O pino é definido na compilação, então trocar pelo botão externo (ligado entre um GPIO livre e o GND) não muda o código. Disparo por timer foi descartado: gera toques que ninguém fez e não exercita o debounce (#3).
 - Rede do IF: "IFRS Alunos" usa WPA3-Personal (SSID e senha, sem portal nem Enterprise), suportado pelo ESP32-S3. O ESP32 só opera em 2,4 GHz; se a rede não oferecer essa faixa, não conecta. Plano B: hotspot de celular em 2,4 GHz.
 - Bot Fight Mode da Cloudflare pode desafiar um cliente que não é navegador; conferir com a placa real antes da apresentação.
-- O relógio do dispositivo não é usado para o momento do toque (SPEC-001 #5), mas a validação do certificado precisa da data certa: o firmware sincroniza a hora por NTP ao conectar.
+- O relógio do dispositivo não é usado para o momento do toque (SPEC-001 #5) nem na validação do certificado: o mbedTLS do Arduino-ESP32 é compilado sem checagem de data (`MBEDTLS_HAVE_TIME_DATE` desligado) e valida cadeia e nome do host. Por isso não há NTP, que a rede do IF bloquearia (UDP 123).
 
 ## Histórico
 
@@ -70,3 +70,4 @@ Sem tela. Log serial em 115200 baud, uma linha por evento (conexão, toque, tent
 |---|---|
 | 2026-11-16 | Criação |
 | 2026-11-16 | Placa, botão provisório (BOOT) e tipo da rede do IF definidos |
+| 2026-11-16 | Sem NTP: a validação do certificado não depende da data |

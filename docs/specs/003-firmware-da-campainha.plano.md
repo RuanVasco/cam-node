@@ -18,7 +18,7 @@ Depende do `POST /api/v1/rings` da SPEC-001 publicado em `campainha.formulei.com
 ### 2. Integração na placa
 
 - `camera`: pinout do ESP32-S3-EYE, JPEG em SVGA (800x600) e qualidade 12, frame buffer na PSRAM. Antes de cada captura descarta o quadro que já estava no buffer (#4). Foto acima de 2 MB não é enviada (#5). Falha ao iniciar a câmera reinicia a placa (#9).
-- `network`: WiFi em modo estação com reconexão automática e checagem no laço, sem reiniciar (#7); hora por NTP ao conectar, para validar o certificado.
+- `wifi_link` (não `network`: no Windows o nome colide com o `Network.h` do core): WiFi em modo estação com reconexão automática, reassociação após 20 s sem link e motivo da queda no log, sem reiniciar (#7, #8). Sem NTP (ver Riscos e decisões da spec).
 - `ring_client`: POST por HTTPS com o bundle de CAs do core (sem `setInsecure`) e header `X-Device-Key`; timeout total abaixo do orçamento de 5 s do CA-1 (#2).
 - `main`: laço com watchdog de tarefa (#9), log serial de uma linha por evento, sem imprimir a chave nem a senha (#8).
 - `CLAUDE.md`: comandos de teste e de monitor serial em "Stack e comandos".
