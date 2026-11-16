@@ -58,7 +58,8 @@ cd frontend && npm ci && npm start   # frontend local (Node 24), proxy de /api p
 cd frontend && npm test -- --watch=false && npm run lint && npm run format:check   # testes (Vitest), lint e formato do front
 cd frontend && npm run build  # build de produção do front
 docker build -t cam-node-api backend && docker build -t cam-node-frontend frontend   # imagens (o CI publica no GHCR com a tag do commit)
-pio run -d doorbell -t upload # grava o firmware (WIFI_SSID, WIFI_PASS, API_URL, DEVICE_API_KEY no ambiente)
+pio run -d doorbell -t upload # grava o firmware (WIFI_SSID, WIFI_PASS, API_URL com https://, DEVICE_API_KEY no ambiente; BUTTON_PIN opcional, padrão 0 = botão BOOT)
+docker compose -f doorbell/docker-compose.test.yml run --build --rm test   # testes unitários da lógica do firmware (ambiente native, sem gcc no host)
 docker compose -f tools/simulator/docker-compose.yml run --build --rm simulator   # simulador do ESP: envia photos/sample.jpg (API_URL e DEVICE_API_KEY opcionais, padrão é o backend local)
 ```
 

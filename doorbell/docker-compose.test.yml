@@ -1,0 +1,13 @@
+services:
+  test:
+    build:
+      context: .
+      dockerfile: test.Dockerfile
+    volumes:
+      - ./:/doorbell
+      - platformio-cache:/home/builder/.platformio
+    tmpfs:
+      - /doorbell/.pio:uid=10001,exec
+
+volumes:
+  platformio-cache:

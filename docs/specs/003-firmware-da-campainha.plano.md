@@ -7,7 +7,7 @@ Depende do `POST /api/v1/rings` da SPEC-001 publicado em `campainha.formulei.com
 ### 1. Projeto e lógica pura testada
 
 - Projeto PlatformIO em `doorbell/` com a plataforma `pioarduino` fixada em versão estável (Arduino-ESP32 3.x; a plataforma oficial parou no 2.x). Placa base `esp32-s3-devkitc-1` com PSRAM octal (`qio_opi`) e `-DBOARD_HAS_PSRAM`. A câmera vem do próprio core (`esp_camera.h`), sem biblioteca extra.
-- `build_flags` com `WIFI_SSID`, `WIFI_PASS`, `API_URL`, `DEVICE_API_KEY` e `BUTTON_PIN` (padrão 0, botão BOOT) lidos por `${sysenv.*}`; `#error` na compilação se alguma credencial vier vazia (#1).
+- `WIFI_SSID`, `WIFI_PASS`, `API_URL`, `DEVICE_API_KEY` e `BUTTON_PIN` (padrão 0, botão BOOT) lidos do ambiente por um script `pre:` do PlatformIO, que escapa os valores (o SSID do IF tem espaço, o que quebra `${sysenv.*}` dentro de `build_flags`) e falha a compilação se alguma credencial vier vazia ou se `API_URL` não for `https://` (#1, #2).
 - Lógica sem dependência do Arduino em `lib/`, testável no computador:
   - `Debouncer`: aceita o aperto depois de 50 ms estável (#3).
   - `RingGate`: ignora apertos por 5 s depois de um envio (SPEC-001 #8).
