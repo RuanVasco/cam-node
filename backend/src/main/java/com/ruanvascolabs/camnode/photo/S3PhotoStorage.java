@@ -39,4 +39,13 @@ class S3PhotoStorage implements PhotoStorage {
             throw new PhotoStorageUnavailableException(e);
         }
     }
+
+    @Override
+    public void delete(String key) {
+        try {
+            s3.deleteObject(request -> request.bucket(bucket).key(key));
+        } catch (SdkException e) {
+            throw new PhotoStorageUnavailableException(e);
+        }
+    }
 }

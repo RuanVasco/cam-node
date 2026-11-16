@@ -3,8 +3,10 @@ package com.ruanvascolabs.camnode.ring;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -13,16 +15,19 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ruanvascolabs.camnode.ring.dto.RingPageResponse;
+import com.ruanvascolabs.camnode.ring.dto.RingRemovalRequest;
 import com.ruanvascolabs.camnode.ring.dto.RingResponse;
 
 @RestController
@@ -66,5 +71,17 @@ class RingController {
                 .contentLength(photo.sizeBytes())
                 .cacheControl(PHOTO_CACHE)
                 .body(new InputStreamResource(photo.content()));
+    }
+
+    @DeleteMapping("/{id}")
+    ResponseEntity<Void> remove(@PathVariable UUID id) {
+        service.remove(List.of(id));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(path = "/removal", consumes = MediaType.APPLICATION_JSON_VALUE)
+    ResponseEntity<Void> removeAll(@Valid @RequestBody RingRemovalRequest request) {
+        service.remove(request.ids());
+        return ResponseEntity.noContent().build();
     }
 }

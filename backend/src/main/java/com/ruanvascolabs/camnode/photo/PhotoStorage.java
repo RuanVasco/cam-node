@@ -8,4 +8,7 @@ public interface PhotoStorage {
 
     /** The caller owns the returned stream and must close it. */
     InputStream open(String key);
+
+    /** Idempotent: deleting a key that does not exist succeeds. */
+    void delete(String key);
 }

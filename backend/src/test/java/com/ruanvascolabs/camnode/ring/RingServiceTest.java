@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,7 +25,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionOperations;
 
+import com.ruanvascolabs.camnode.photo.PhotoDeletionQueue;
 import com.ruanvascolabs.camnode.photo.PhotoStorage;
 import com.ruanvascolabs.camnode.support.TestPhotos;
 
@@ -34,9 +37,10 @@ class RingServiceTest {
 
     private final RingRepository repository = mock(RingRepository.class);
     private final PhotoStorage photoStorage = mock(PhotoStorage.class);
+    private final PhotoDeletionQueue photoDeletions = mock(PhotoDeletionQueue.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
-    private final RingService service =
-            new RingService(repository, photoStorage, events, Clock.fixed(NOW, ZoneOffset.UTC));
+    private final RingService service = new RingService(repository, photoStorage, photoDeletions, events,
+            TransactionOperations.withoutTransaction(), Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void persistAssignsId() {
@@ -115,5 +119,36 @@ class RingServiceTest {
 
         assertThatThrownBy(() -> service.photo(id)).isInstanceOf(RingNotFoundException.class);
         verify(photoStorage, never()).open(anyString());
+    }
+
+    @Test
+    @DisplayName("SPEC-010 #6: a ring removed concurrently between read and delete fails the whole removal")
+    void concurrentRemovalFails() {
+        Ring ring = new Ring(NOW, "2026/11/23/a.jpg", 1);
+        UUID id = UUID.randomUUID();
+        ReflectionTestUtils.setField(ring, "id", id);
+        when(repository.findAllById(any())).thenReturn(List.of(ring));
+        when(repository.deleteByIds(any())).thenReturn(0);
+
+        assertThatThrownBy(() -> service.remove(List.of(id))).isInstanceOf(RingNotFoundException.class);
+        verify(photoDeletions, never()).enqueue(any());
+        verify(photoDeletions, never()).deleteNow(any());
+        verify(events, never()).publishEvent(any());
+    }
+
+    @Test
+    @DisplayName("SPEC-010 #3, #4: a removal queues the photo, announces the ring and then deletes the photo")
+    void removalQueuesAnnouncesAndDeletes() {
+        Ring ring = new Ring(NOW, "2026/11/23/a.jpg", 1);
+        UUID id = UUID.randomUUID();
+        ReflectionTestUtils.setField(ring, "id", id);
+        when(repository.findAllById(any())).thenReturn(List.of(ring));
+        when(repository.deleteByIds(any())).thenReturn(1);
+
+        service.remove(List.of(id));
+
+        verify(photoDeletions).enqueue(List.of("2026/11/23/a.jpg"));
+        verify(events).publishEvent(new RingsRemoved(List.of(id)));
+        verify(photoDeletions).deleteNow(List.of("2026/11/23/a.jpg"));
     }
 }

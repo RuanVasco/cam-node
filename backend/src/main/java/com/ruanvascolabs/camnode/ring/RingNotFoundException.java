@@ -7,4 +7,9 @@ public class RingNotFoundException extends RuntimeException {
     RingNotFoundException(UUID id) {
         super("Ring not found: " + id);
     }
+
+    // A ring removed concurrently: the delete count does not say which one.
+    RingNotFoundException() {
+        super("Ring removed concurrently");
+    }
 }

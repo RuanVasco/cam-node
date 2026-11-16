@@ -7,12 +7,12 @@ A SPEC-004 e a SPEC-005 ainda são rascunho, então valem o #7 e o #8 (senha de 
 ### 1. Backend: remoção protegida pela senha de administrador
 
 - `admin/`, no molde de `device/`:
-  - `AdminProperties` (`camnode.admin.api-key`, lido de `ADMIN_API_KEY`). Opcional: vazio desliga a remoção (toda tentativa responde 401) e o início registra um aviso. Assim o deploy não depende da ordem entre o segredo no Infisical e a imagem nova.
-  - `AdminKeyInterceptor` em `DELETE /api/v1/rings/*` e `POST /api/v1/rings/removal`: primeiro o bloqueio (#8, 429 com `Retry-After`), depois a senha em comparação de tempo constante (#7, 401).
-  - `AdminKeyLockout` com `Clock`: guarda o momento das senhas erradas; com 5 dentro de 15 min, recusa até a mais antiga sair da janela. Tentativa recusada pelo bloqueio não conta como erro, senão o bloqueio nunca acaba. Senha certa zera a contagem. Bloqueio global, não por cliente: o IP real vem do Cloudflare e a senha é provisória.
+  - `AdminProperties` (`camnode.admin.api-key`, lido de `ADMIN_API_KEY`, sem valor padrão nem local). Vazio desliga a remoção (toda tentativa responde 401) e o início registra um aviso. Assim o deploy não depende da ordem entre o segredo no Infisical e a imagem nova.
+  - `AdminKeyInterceptor` registrado duas vezes, para `DELETE /api/v1/rings/*` e para `POST /api/v1/rings/removal`, delegando ao `AdminKeyVerifier`.
+  - `AdminKeyVerifier` com `Clock`: primeiro o bloqueio (#8, 429 com `Retry-After`), depois a senha em comparação de tempo constante (#7, 401), tudo sob a mesma trava para tentativas paralelas não passarem juntas pela checagem. Guarda o momento das senhas erradas; com 5 dentro de 15 min, recusa até a mais antiga sair da janela. Tentativa recusada pelo bloqueio e senha ausente não contam como erro. Senha certa não zera a contagem, porque o #8 conta as erradas na janela. Bloqueio global, não por cliente: o IP real vem do Cloudflare e a senha é provisória.
 - `photo/`:
   - `PhotoStorage.delete(key)`; o S3 não falha para chave inexistente, então apagar é idempotente.
-  - Tabela `photo_deletion` (`photo_key` chave primária, `requested_at`) e `PhotoDeletionQueue`: `enqueue` só roda dentro da transação de quem chama (`Propagation.MANDATORY`); `deleteNow` tenta apagar fora da transação e tira da fila o que conseguiu; `retryPending` agendado (padrão a cada 1 h, configurável) percorre a fila e para no primeiro erro de indisponibilidade (#3).
+  - Tabela `photo_deletion` (`photo_key` chave primária, `queued_at`) e `PhotoDeletionQueue`: `enqueue` só roda dentro da transação de quem chama (`Propagation.MANDATORY`); `deleteNow` tenta apagar fora da transação, tira da fila o que conseguiu e nunca falha a remoção; `retryPending` agendado (1 min depois do início do pod e depois a cada 1 h, configurável) percorre a fila. Uma chave que falha vai para o fim da fila e a rodada para ali: indisponibilidade derruba todas, e uma chave com erro próprio não segura as de trás (#3).
   - `@EnableScheduling` em `config/`.
 - `ring/`:
   - `RingService.remove(ids)`: tira repetidos; numa transação curta (`TransactionTemplate`, sem rede) busca os toques, falha com 404 se faltar algum, apaga pelo id conferindo a contagem (outra remoção simultânea faz a segunda falhar e desfazer tudo) e enfileira as chaves das fotos. Depois do commit publica `RingsRemoved` e chama `deleteNow`.
@@ -49,11 +49,12 @@ A SPEC-004 e a SPEC-005 ainda são rascunho, então valem o #7 e o #8 (senha de 
 | Segunda remoção do mesmo toque responde 404 | integração | CA-7 |
 | Armazenamento fora do ar: 204, foto 404 e chave na fila | integração | CA-3 |
 | Fila reprocessada apaga o objeto e esvazia a fila | integração | CA-3 |
-| Reprocessamento para no primeiro erro de indisponibilidade e mantém a fila | unitário | #3 |
+| Chave que falha vai para o fim da fila e a rodada para; apagar na hora nunca falha a remoção | unitário | #3 |
+| Remoção concorrente entre a leitura e o delete desfaz tudo | unitário | #6 |
 | 3 ids removidos de uma vez; 101 ids é 400 sem remover; lista vazia é 400; um id inexistente é 404 sem remover os outros | integração | CA-6, #6 |
 | Sem senha e com senha errada: 401 e o toque continua | integração | CA-8 |
 | Sexta tentativa depois de 5 erros: 429 mesmo com a senha certa | integração | CA-9 |
-| Janela de 15 min libera; tentativa bloqueada não conta; senha certa zera | unitário com relógio fixo | #8 |
+| Janela de 15 min libera; tentativa bloqueada e senha ausente não contam; senha certa não zera | unitário com relógio fixo | #8 |
 | Senha não configurada: 401 | unitário | #7 |
 | Assinante recebe `ring-removed` em até 2 s | integração | CA-4 |
 | Remoção local e evento do stream descontam o total uma vez só | unitário do serviço | #2, #4 |

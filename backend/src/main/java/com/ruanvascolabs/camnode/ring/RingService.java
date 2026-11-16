@@ -5,14 +5,21 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionOperations;
 
 import com.ruanvascolabs.camnode.photo.JpegSignature;
+import com.ruanvascolabs.camnode.photo.PhotoDeletionQueue;
 import com.ruanvascolabs.camnode.photo.PhotoStorage;
 
 @Service
@@ -25,13 +32,18 @@ class RingService {
 
     private final RingRepository repository;
     private final PhotoStorage photoStorage;
+    private final PhotoDeletionQueue photoDeletions;
     private final ApplicationEventPublisher events;
+    private final TransactionOperations transaction;
     private final Clock clock;
 
-    RingService(RingRepository repository, PhotoStorage photoStorage, ApplicationEventPublisher events, Clock clock) {
+    RingService(RingRepository repository, PhotoStorage photoStorage, PhotoDeletionQueue photoDeletions,
+            ApplicationEventPublisher events, TransactionOperations transaction, Clock clock) {
         this.repository = repository;
         this.photoStorage = photoStorage;
+        this.photoDeletions = photoDeletions;
         this.events = events;
+        this.transaction = transaction;
         this.clock = clock;
     }
 
@@ -66,5 +78,33 @@ class RingService {
     RingPhoto photo(UUID id) {
         Ring ring = repository.findById(id).orElseThrow(() -> new RingNotFoundException(id));
         return new RingPhoto(photoStorage.open(ring.getPhotoKey()), ring.getPhotoSizeBytes());
+    }
+
+    /**
+     * Rule: SPEC-010 #2, #3, #6. All or nothing: a missing id, including one removed concurrently, rolls the whole
+     * removal back. Only database work runs in the transaction; the photos leave storage after the commit.
+     */
+    void remove(Collection<UUID> requestedIds) {
+        Set<UUID> ids = new LinkedHashSet<>(requestedIds);
+        List<String> photoKeys = transaction.execute(status -> {
+            List<Ring> rings = repository.findAllById(ids);
+            if (rings.size() != ids.size()) {
+                throw new RingNotFoundException(firstMissing(ids, rings));
+            }
+            // A concurrent removal deletes some rows first; the count tells, and the exception rolls back.
+            if (repository.deleteByIds(ids) != ids.size()) {
+                throw new RingNotFoundException();
+            }
+            List<String> keys = rings.stream().map(Ring::getPhotoKey).toList();
+            photoDeletions.enqueue(keys);
+            return keys;
+        });
+        events.publishEvent(new RingsRemoved(List.copyOf(ids)));
+        photoDeletions.deleteNow(photoKeys);
+    }
+
+    private static UUID firstMissing(Set<UUID> ids, List<Ring> found) {
+        Set<UUID> foundIds = found.stream().map(Ring::getId).collect(Collectors.toSet());
+        return ids.stream().filter(id -> !foundIds.contains(id)).findFirst().orElseThrow();
     }
 }

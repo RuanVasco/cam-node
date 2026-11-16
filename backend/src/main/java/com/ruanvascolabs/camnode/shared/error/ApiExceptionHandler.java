@@ -13,6 +13,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.ruanvascolabs.camnode.admin.AdminKeyLockedException;
+import com.ruanvascolabs.camnode.admin.InvalidAdminKeyException;
 import com.ruanvascolabs.camnode.device.InvalidDeviceKeyException;
 import com.ruanvascolabs.camnode.photo.PhotoNotFoundException;
 import com.ruanvascolabs.camnode.photo.PhotoStorageUnavailableException;
@@ -41,6 +43,21 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InvalidDeviceKeyException.class)
     ProblemDetail invalidDeviceKey() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Chave do dispositivo ausente ou inválida.");
+    }
+
+    @ExceptionHandler(InvalidAdminKeyException.class)
+    ProblemDetail invalidAdminKey() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Senha de administrador ausente ou incorreta.");
+    }
+
+    // Rounded up so a client that waits Retry-After seconds is not refused again by a fraction of a second.
+    @ExceptionHandler(AdminKeyLockedException.class)
+    ResponseEntity<ProblemDetail> adminKeyLocked(AdminKeyLockedException e) {
+        long seconds = Math.max(1, e.remaining().plusMillis(999).toSeconds());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
+                .body(ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS,
+                        "Muitas tentativas. Tente de novo em alguns minutos."));
     }
 
     @ExceptionHandler(EmptyPhotoException.class)

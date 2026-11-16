@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 public final class RingUploadClient {
 
     public static final String DEVICE_KEY = "test-device-key";
+    public static final String ADMIN_KEY = "test-admin-key";
 
     private final RestClient client;
 

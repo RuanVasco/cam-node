@@ -12,9 +12,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
+import com.ruanvascolabs.camnode.photo.PhotoDeletionQueue;
 import com.ruanvascolabs.camnode.support.PostgresTestConfiguration;
 import com.ruanvascolabs.camnode.support.RingUploadClient;
 import com.ruanvascolabs.camnode.support.TestPhotos;
@@ -23,6 +26,7 @@ import com.ruanvascolabs.camnode.support.TestPhotos;
 @Import(PostgresTestConfiguration.class)
 @TestPropertySource(properties = {
         "camnode.device.api-key=" + RingUploadClient.DEVICE_KEY,
+        "camnode.admin.api-key=" + RingUploadClient.ADMIN_KEY,
         // Nothing listens on port 1, so every storage call fails like an unreachable MinIO.
         "camnode.photo-storage.endpoint=http://localhost:1"
 })
@@ -31,16 +35,22 @@ class RingStorageUnavailableIT {
     private final RingUploadClient client;
     private final RestClient reader;
     private final RingRepository repository;
+    private final JdbcTemplate jdbc;
+    private final PhotoDeletionQueue photoDeletions;
 
-    RingStorageUnavailableIT(@LocalServerPort int port, RingRepository repository) {
+    RingStorageUnavailableIT(@LocalServerPort int port, RingRepository repository, JdbcTemplate jdbc,
+            PhotoDeletionQueue photoDeletions) {
         this.client = new RingUploadClient(port);
         this.reader = RestClient.create("http://localhost:" + port);
         this.repository = repository;
+        this.jdbc = jdbc;
+        this.photoDeletions = photoDeletions;
     }
 
     @BeforeEach
     void clean() {
         repository.deleteAll();
+        jdbc.update("DELETE FROM photo_deletion");
     }
 
     @Test
@@ -61,5 +71,22 @@ class RingStorageUnavailableIT {
                 .exchange((request, response) -> response.getStatusCode());
 
         assertThat(status).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("SPEC-010 CA-3 (#3): with storage down the removal is 204, the photo is 404 at once and stays queued")
+    void removalWithStorageDown() {
+        UUID id = repository.save(new Ring(Instant.parse("2026-11-20T12:00:00Z"), "down/photo.jpg", 1)).getId();
+
+        HttpStatusCode status = reader.delete().uri("/api/v1/rings/{id}", id)
+                .header("X-Admin-Key", RingUploadClient.ADMIN_KEY)
+                .exchange((request, response) -> response.getStatusCode());
+        photoDeletions.retryPending();
+        HttpStatusCode photoStatus = reader.get().uri("/api/v1/rings/{id}/photo", id)
+                .exchange((request, response) -> response.getStatusCode());
+
+        assertThat(status).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(photoStatus).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(jdbc.queryForList("SELECT photo_key FROM photo_deletion", String.class)).containsExactly("down/photo.jpg");
     }
 }
